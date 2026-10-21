@@ -12,12 +12,24 @@ import { supabasePublicConfig } from "@/lib/supabase/config";
  */
 export async function GET() {
   await connection();
-  const env = serverEnv();
+  let env: ReturnType<typeof serverEnv>;
+  try {
+    env = serverEnv();
+  } catch (err) {
+    // A setting is present but malformed (for example a DATABASE_URL with brackets or spaces).
+    return NextResponse.json(
+      { problem: err instanceof Error ? err.message : "Invalid settings" },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const supabase = supabasePublicConfig();
 
   let database: string;
   if (!isDbConfigured()) {
     database = "missing: add DATABASE_URL";
+  } else if (/\[|\]|YOUR-PASSWORD/i.test(env.DATABASE_URL ?? "")) {
+    database =
+      "DATABASE_URL still has [YOUR-PASSWORD] or square brackets in it: put your real password in, without brackets";
   } else {
     try {
       const rows = await getDb()
@@ -27,11 +39,17 @@ export async function GET() {
       database = `ok: ${rows[0]?.n ?? 0} published templates`;
     } catch (err) {
       // Error codes only: messages can include the host name.
-      const code = (err as { code?: string }).code ?? "unknown";
+      // Drizzle wraps the driver's error; the Postgres or network code is on `cause`.
+      const inner = (err as { cause?: unknown }).cause ?? err;
+      const code = String((inner as { code?: unknown }).code ?? "unknown");
       database =
         code === "42P01"
           ? "connected, but the REMAXX tables aren't there: run the setup SQL"
-          : `can't connect (error ${code}): check DATABASE_URL and its password`;
+          : code === "28P01" || code === "XX000"
+            ? `can't sign in (error ${code}): the password or user name in DATABASE_URL is wrong`
+            : code === "ENOTFOUND" || code === "ENETUNREACH" || code === "EHOSTUNREACH"
+              ? `can't reach the server (error ${code}): use the Transaction pooler string (port 6543), not the Direct connection`
+              : `can't connect (error ${code}): check DATABASE_URL`;
     }
   }
 
