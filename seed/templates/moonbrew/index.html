@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moonbrew: coffee after dark</title>
+<style>
+  :root { --bg:#ffe7ef; --ink:#4a1d3f; --peach:#ffb4a2; --cream:#fff6f0; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family: Georgia, "Times New Roman", serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; justify-content:space-between; align-items:center; padding:24px 6vw; }
+  .logo { font-style:italic; font-weight:700; font-size:24px; }
+  nav a { color:var(--ink); margin-left:22px; text-decoration:none; font-family: system-ui, sans-serif; font-size:15px; opacity:.75; }
+  .hero { display:grid; grid-template-columns: 1.1fr .9fr; gap:40px; align-items:center; padding:40px 6vw 80px; }
+  h1 { font-size: clamp(44px, 7vw, 88px); line-height:.98; letter-spacing:-.02em; }
+  .lede { font-family: system-ui, sans-serif; font-size:18px; line-height:1.6; margin:22px 0 30px; max-width:36ch; opacity:.8; }
+  .btn { display:inline-block; background:var(--ink); color:var(--cream); padding:14px 26px; border-radius:999px; font-family:system-ui,sans-serif; font-weight:600; border:0; cursor:pointer; font-size:16px; }
+  .moon { position:relative; width:min(380px, 70vw); aspect-ratio:1; border-radius:50%; background:var(--peach); margin:auto; box-shadow: 0 30px 80px #4a1d3f22; }
+  .moon::after { content:""; position:absolute; top:12%; left:22%; width:72%; height:72%; border-radius:50%; background:var(--bg); }
+  .menu { background:var(--cream); padding:70px 6vw; }
+  .menu h2 { font-size:40px; margin-bottom:28px; }
+  .items { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:18px; }
+  .item { background:#fff; border-radius:22px; padding:22px; font-family:system-ui,sans-serif; }
+  .item b { display:block; font-family:Georgia,serif; font-size:21px; margin-bottom:6px; }
+  .item span { opacity:.7; font-size:15px; }
+  .price { float:right; font-weight:700; }
+  .where { padding:60px 6vw; font-family:system-ui,sans-serif; }
+  .where p { font-size:18px; margin-top:8px; }
+  #status { margin-top:16px; font-weight:600; }
+  @media (max-width: 760px) { .hero { grid-template-columns:1fr; } nav { display:none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">moonbrew</div>
+  <nav><a href="#menu">Menu</a><a href="#where">Where</a></nav>
+</header>
+<section class="hero">
+  <div>
+    <h1>Coffee after dark</h1>
+    <p class="lede">A little van serving oat lattes, cardamom buns and slow pour-overs under the streetlights, Thursday to Sunday.</p>
+    <a class="btn" href="#where">Find the van</a>
+  </div>
+  <div class="moon" aria-hidden="true"></div>
+</section>
+<section class="menu" id="menu">
+  <h2>Tonight's menu</h2>
+  <div class="items">
+    <div class="item"><span class="price">$5</span><b>Moon latte</b><span>Oat milk, honey, a pinch of sea salt</span></div>
+    <div class="item"><span class="price">$4</span><b>Night pour-over</b><span>Rotating single origin, brewed slow</span></div>
+    <div class="item"><span class="price">$3.5</span><b>Cardamom bun</b><span>Baked at 5pm, gone by 9</span></div>
+    <div class="item"><span class="price">$4.5</span><b>Decaf cocoa</b><span>For the ones who want to sleep</span></div>
+  </div>
+</section>
+<section class="where" id="where">
+  <h2>Where's the van tonight?</h2>
+  <p>Corner of Linden &amp; 4th, 7pm until we sell out.</p>
+  <button class="btn" type="button" id="notify" style="margin-top:22px">Text me when we're parked</button>
+  <p id="status" role="status"></p>
+</section>
+<script>
+  document.getElementById("notify").addEventListener("click", function () {
+    document.getElementById("status").textContent = "You're on the list. We'll text you at 6:45.";
+    this.disabled = true;
+  });
+</script>
+</body>
+</html>

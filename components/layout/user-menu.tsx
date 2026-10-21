@@ -9,10 +9,12 @@ export function UserMenu({
   handle,
   displayName,
   avatarUrl,
+  isAdmin = false,
 }: {
   handle: string;
   displayName: string;
   avatarUrl: string | null;
+  isAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -68,6 +70,22 @@ export function UserMenu({
           >
             Your profile
           </Link>
+          <Link
+            role="menuitem"
+            href="/upload"
+            className={item + " sm:hidden"}
+            onClick={() => setOpen(false)}
+          >
+            Upload
+          </Link>
+          <Link role="menuitem" href="/collections" className={item} onClick={() => setOpen(false)}>
+            Saved
+          </Link>
+          {isAdmin ? (
+            <Link role="menuitem" href="/admin" className={item} onClick={() => setOpen(false)}>
+              Admin
+            </Link>
+          ) : null}
           <Link role="menuitem" href="/settings" className={item} onClick={() => setOpen(false)}>
             Settings
           </Link>

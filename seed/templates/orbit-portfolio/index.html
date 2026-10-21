@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ines Okafor: product designer</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; background:#f6f4ef; color:#151515; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 28px; }
+  header { display:flex; justify-content:space-between; padding:28px 0; font-family: system-ui, sans-serif; font-size:14px; letter-spacing:.01em; }
+  header a { color:inherit; text-decoration:none; margin-left:22px; }
+  .intro { padding:12vh 0 10vh; border-bottom:1px solid #151515; }
+  .intro h1 { font-weight:400; font-size: clamp(36px, 5.4vw, 68px); line-height:1.08; max-width:18ch; }
+  .intro h1 em { font-style:italic; }
+  .meta { display:flex; gap:40px; margin-top:36px; font-family: system-ui, sans-serif; font-size:14px; color:#555; flex-wrap:wrap; }
+  .work { padding:6vh 0; }
+  .case { display:grid; grid-template-columns: 1fr 2fr; gap:40px; padding:40px 0; border-bottom:1px solid #d8d4cb; align-items:center; }
+  .case h2 { font-weight:400; font-size:30px; }
+  .case p { font-family: system-ui, sans-serif; color:#555; margin-top:10px; line-height:1.6; font-size:15px; }
+  .shot { aspect-ratio: 16/10; border-radius:4px; position:relative; overflow:hidden; }
+  .shot i { position:absolute; inset:14% 12%; background:#fff; border-radius:6px; box-shadow: 0 20px 40px #0002; }
+  .shot i::before { content:""; position:absolute; left:8%; top:12%; width:40%; height:10%; background:#151515; border-radius:2px; }
+  .shot i::after { content:""; position:absolute; left:8%; top:30%; right:8%; bottom:12%; background: repeating-linear-gradient(#eee 0 10px, transparent 10px 22px); }
+  footer { padding:10vh 0; font-size: clamp(28px, 4vw, 48px); }
+  footer a { color:inherit; }
+  @media (max-width: 720px) { .case { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span>Ines Okafor</span><nav><a href="#work">Work</a><a href="#contact">Contact</a></nav></header>
+  <section class="intro">
+    <h1>I design calm software for <em>busy</em> people, mostly in health and finance.</h1>
+    <div class="meta"><span>Lisbon, open to remote</span><span>Previously at two startups you haven't heard of</span><span>Available from June</span></div>
+  </section>
+  <section class="work" id="work">
+    <article class="case"><div><h2>Pillbox</h2><p>Medication reminders for people managing five or more prescriptions. Reduced missed doses in a 6-week pilot.</p></div><div class="shot" style="background:#c9d6c3"><i></i></div></article>
+    <article class="case"><div><h2>Tally</h2><p>A shared-expenses app for households. Rebuilt onboarding from 9 screens to 3.</p></div><div class="shot" style="background:#e5c9b6"><i></i></div></article>
+    <article class="case"><div><h2>Field Notes</h2><p>An offline-first notebook for nurses on home visits. Designed for one hand and bad signal.</p></div><div class="shot" style="background:#c7cfe0"><i></i></div></article>
+  </section>
+  <footer id="contact">Say hello: <a href="mailto:hello@example.com">hello@example.com</a></footer>
+</div>
+</body>
+</html>

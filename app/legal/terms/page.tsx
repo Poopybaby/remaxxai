@@ -40,6 +40,14 @@ export default function TermsPage() {
         backups and legal compliance.
       </p>
 
+      <h3 id="personal-use-license">REMAXX Personal Use license</h3>
+      <p>
+        If a creator picks REMAXX Personal Use, anyone may view the template, remix it on REMAXX,
+        and use the result for personal, non-commercial purposes. Remixes must keep this license and
+        credit the creator. Selling it, or using it for a business or client, needs the
+        creator&apos;s separate permission.
+      </p>
+
       <h2>4. Remixes and credit</h2>
       <p>
         When you remix a template, your remix keeps a visible credit to every template it came from,

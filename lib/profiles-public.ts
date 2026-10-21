@@ -6,6 +6,7 @@ import { getProfileByHandle } from "@/lib/profiles";
 
 /** The fields of a profile anyone may see. Never includes role, email or age confirmation. */
 export type PublicProfile = {
+  id: string;
   handle: string;
   displayName: string;
   bio: string;
@@ -27,6 +28,7 @@ export async function getPublicProfile(rawHandle: string): Promise<PublicProfile
   const p = await getProfileByHandle(getDb(), handle);
   if (!p) return null;
   return {
+    id: p.id,
     handle: p.handle,
     displayName: p.displayName,
     bio: p.bio,

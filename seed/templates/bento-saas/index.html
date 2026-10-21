@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay: shared inbox for small teams</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="nav">
+  <a class="logo" href="#">relay</a>
+  <nav><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+  <a class="btn small" href="#start">Start free</a>
+</header>
+
+<section class="hero">
+  <span class="badge">New: auto-assign rules</span>
+  <h1>One inbox for every customer email your team gets.</h1>
+  <p>Relay turns support@, hello@ and billing@ into a shared queue with owners, notes and replies that never cross.</p>
+  <div class="actions"><a class="btn" href="#start">Start free</a><a class="btn ghost" href="#features">See how it works</a></div>
+</section>
+
+<section class="bento" id="features">
+  <div class="tile wide">
+    <h3>Assign without asking</h3>
+    <p>Rules route billing questions to Priya and bugs to the dev on call.</p>
+    <div class="queue" id="queue"></div>
+  </div>
+  <div class="tile tall dark">
+    <h3>Collision alerts</h3>
+    <p>See when a teammate is already typing a reply.</p>
+    <div class="typing"><span></span><span></span><span></span></div>
+  </div>
+  <div class="tile"><h3>Internal notes</h3><p>@mention a teammate right on the thread.</p></div>
+  <div class="tile accent"><h3>2.1h</h3><p>Median first response for teams on Relay.</p></div>
+  <div class="tile wide"><h3>Works with your email</h3><p>Forward any address. No migration, no new domain.</p></div>
+</section>
+
+<section class="cta" id="start">
+  <h2>Try it with your team this week.</h2>
+  <div class="signup">
+    <label for="email" class="sr">Work email</label>
+    <input id="email" type="email" placeholder="you@company.com">
+    <button type="button" class="btn" id="go">Get started</button>
+  </div>
+  <p id="msg" role="status"></p>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>

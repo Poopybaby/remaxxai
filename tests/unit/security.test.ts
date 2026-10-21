@@ -66,11 +66,12 @@ describe("security headers", () => {
   });
 
   it("sandboxes previews without same-origin or forms", () => {
-    const csp = previewSecurityHeaders()["Content-Security-Policy"];
+    const csp = previewSecurityHeaders("https://remaxx.ai")["Content-Security-Policy"];
     expect(csp).toContain("sandbox allow-scripts");
     expect(csp).not.toContain("allow-same-origin");
     expect(csp).not.toContain("allow-forms");
     expect(csp).not.toContain("allow-top-navigation");
     expect(csp).toContain("form-action 'none'");
+    expect(csp).toContain("frame-ancestors https://remaxx.ai");
   });
 });

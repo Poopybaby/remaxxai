@@ -175,13 +175,13 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 2 — Gallery**
 
-- [ ] Full project/version/file/license/tag/social schema
-- [ ] Upload wizard: zip / folder / single HTML, cover, metadata, license, rights checkbox; validation + scan + moderation
-- [ ] Project page: big sandboxed preview, file browser, credit chain, report button
-- [ ] Likes, saves/collections, follows; explore grid with filters (tool, category, style, license)
-- [ ] Report + admin review queue (basic), unpublish
-- [ ] Seed: 25–30 original templates I write, varied aesthetics, all CC0 or MIT, with covers generated from screenshots
-- [ ] Tests: license compatibility + credit chain, upload validator, permissions
+- [x] Full project/version/file/license/tag/social schema
+- [x] Upload wizard: zip / folder / single HTML, cover, metadata, license, rights checkbox; validation + scan + moderation
+- [x] Project page: big sandboxed preview, file browser, credit chain, report button
+- [x] Likes, saves/collections, follows; explore grid with filters (tool, category, style, license)
+- [x] Report + admin review queue (basic), unpublish
+- [x] Seed: 25–30 original templates I write, varied aesthetics, 29 templates under a REMAXX Studio account across six licenses, including a three-generation remix chain, with screenshot covers
+- [x] Tests: license compatibility + credit chain, upload validator, permissions
 
 **Phase 3 — Vibe Search**
 
@@ -218,6 +218,12 @@ Credits formula (all knobs in `config/plans.ts`):
 - [ ] Sentry, PostHog, accessibility pass (WCAG AA), mobile pass, Lighthouse budget
 - [ ] Final legal pages (still DRAFT), deployment guide, Playwright smoke suite in CI
 
+**Phase 2 build notes (decided while building, cheap to change later):**
+- Uploads are static sites only (HTML/CSS/JS/images/fonts/media). React/Vue/TS source is asked for its build output; Sandpack-powered React projects arrive with the editor in Phase 4.
+- Upload size is 4 MB because uploads pass through a Vercel function (4.5 MB body limit). Direct-to-storage uploads can lift this.
+- Project files and covers are stored in Postgres (content-addressed `blobs`), not Supabase Storage, so setup needs no buckets yet. `blobs.storage_key` is the migration path.
+- Seed templates belong to an official @remaxx_studio account and start with zero likes: no fake engagement.
+
 ---
 
 ## 7. Keys you'll need to supply (by phase)
@@ -237,7 +243,7 @@ Until keys arrive I can build and test everything against PGlite and mocked prov
 
 ## 8. Questions (expensive to undo)
 
-**All decided Oct 21, 2026.** Plan approved. Phase 1 complete.
+**All decided Oct 21, 2026.** Plan approved. Phases 1–2 complete.
 
 **Q1. Auth provider — DECIDED:** Supabase Auth.
 

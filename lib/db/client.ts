@@ -20,7 +20,8 @@ export function getDb(): Db {
   const url = serverEnv().DATABASE_URL;
   if (!url) throw new MissingConfigError("Database", ["DATABASE_URL"]);
   // `prepare: false` is required behind Supabase's transaction-mode pooler (port 6543).
-  const client = postgres(url, { prepare: false, max: 5 });
+  const max = Math.min(Math.max(Number(process.env.DATABASE_POOL_MAX) || 5, 1), 20);
+  const client = postgres(url, { prepare: false, max });
   instance = drizzle({ client, schema });
   return instance;
 }

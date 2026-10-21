@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frost UI: glass component kit</title>
+<style>
+  :root { --glass: rgba(255,255,255,.14); --stroke: rgba(255,255,255,.32); --text:#fff; --sub:rgba(255,255,255,.75); }
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif; color:var(--text); background: radial-gradient(circle at 15% 20%, #ff7ab6 0, transparent 35%), radial-gradient(circle at 85% 30%, #7a8cff 0, transparent 40%), radial-gradient(circle at 50% 90%, #3de8c7 0, transparent 40%), #2a1d52; padding:40px 24px; }
+  h1 { font-weight:600; font-size:34px; } .lede { color:var(--sub); margin:6px 0 30px; }
+  .kit { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; max-width:1100px; }
+  .glass { background:var(--glass); border:1px solid var(--stroke); border-radius:24px; padding:22px; backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%); box-shadow: 0 10px 40px rgba(20,0,60,.25); }
+  .label { font-size:12px; letter-spacing:.06em; color:var(--sub); margin-bottom:14px; }
+  .btns { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { border:1px solid var(--stroke); background:var(--glass); color:#fff; padding:11px 18px; border-radius:14px; font:inherit; cursor:pointer; }
+  .btn.solid { background:#fff; color:#2a1d52; font-weight:600; }
+  .field { display:flex; align-items:center; gap:10px; border:1px solid var(--stroke); background:rgba(255,255,255,.08); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+  .field input { background:transparent; border:0; color:#fff; font:inherit; flex:1; outline:none; }
+  .field input::placeholder { color:var(--sub); }
+  .switch { width:52px; height:30px; border-radius:999px; background:rgba(255,255,255,.2); border:1px solid var(--stroke); position:relative; cursor:pointer; padding:0; }
+  .switch::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition: left .2s; }
+  .switch[aria-checked="true"] { background:#3de8c7; }
+  .switch[aria-checked="true"]::after { left:25px; }
+  .row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; }
+  .avatar { width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg,#ffd27a,#ff7ab6); border:2px solid #fff; }
+  .profile { display:flex; gap:12px; align-items:center; }
+  .profile small { color:var(--sub); display:block; }
+  .progress { height:10px; background:rgba(255,255,255,.18); border-radius:999px; overflow:hidden; margin-top:6px; }
+  .progress span { display:block; height:100%; width:68%; background: linear-gradient(90deg,#3de8c7,#7a8cff); }
+  .toast { display:flex; gap:12px; align-items:center; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#3de8c7; box-shadow: 0 0 12px #3de8c7; }
+</style>
+</head>
+<body>
+<h1>Frost UI</h1>
+<p class="lede">A tiny glassmorphism kit. Copy any block.</p>
+<div class="kit">
+  <section class="glass"><p class="label">BUTTONS</p><div class="btns"><button class="btn solid" type="button">Primary</button><button class="btn" type="button">Secondary</button><button class="btn" type="button" disabled style="opacity:.5">Disabled</button></div></section>
+  <section class="glass"><p class="label">INPUTS</p><label class="field"><span aria-hidden="true">✉</span><input placeholder="Email address" aria-label="Email address"></label><label class="field"><span aria-hidden="true">⌕</span><input placeholder="Search" aria-label="Search"></label></section>
+  <section class="glass"><p class="label">TOGGLES</p>
+    <div class="row"><span>Notifications</span><button class="switch" role="switch" aria-checked="true" aria-label="Notifications" type="button"></button></div>
+    <div class="row"><span>Dark sky mode</span><button class="switch" role="switch" aria-checked="false" aria-label="Dark sky mode" type="button"></button></div>
+  </section>
+  <section class="glass"><p class="label">PROFILE</p><div class="profile"><div class="avatar"></div><div><b>Rae Moreno</b><small>Motion designer</small></div><button class="btn" type="button" style="margin-left:auto">Follow</button></div></section>
+  <section class="glass"><p class="label">PROGRESS</p><div class="row"><span>Uploading assets</span><span>68%</span></div><div class="progress"><span></span></div></section>
+  <section class="glass"><p class="label">TOAST</p><div class="toast"><span class="dot"></span><div><b>Saved</b><br><small style="color:var(--sub)">Your changes are live.</small></div></div></section>
+</div>
+<script>
+  document.querySelectorAll(".switch").forEach(function (s) { s.onclick = function () { s.setAttribute("aria-checked", s.getAttribute("aria-checked") !== "true"); }; });
+</script>
+</body>
+</html>

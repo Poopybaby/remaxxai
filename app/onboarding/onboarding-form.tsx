@@ -37,7 +37,7 @@ export function OnboardingForm({
           <Input
             id="handle"
             name="handle"
-            defaultValue={suggestedHandle}
+            defaultValue={state.values?.handle ?? suggestedHandle}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
@@ -54,7 +54,7 @@ export function OnboardingForm({
         <Input
           id="displayName"
           name="displayName"
-          defaultValue={suggestedName}
+          defaultValue={state.values?.displayName ?? suggestedName}
           autoComplete="name"
           required
           maxLength={50}
@@ -64,10 +64,20 @@ export function OnboardingForm({
       </Field>
 
       <div className="border-line bg-panel flex flex-col gap-3 rounded-[var(--radius-card)] border p-4">
-        <CheckboxField id="ageConfirmed" name="ageConfirmed" error={e.ageConfirmed}>
+        <CheckboxField
+          id="ageConfirmed"
+          name="ageConfirmed"
+          error={e.ageConfirmed}
+          defaultChecked={state.values?.ageConfirmed === "on"}
+        >
           I&apos;m 18 or older.
         </CheckboxField>
-        <CheckboxField id="termsAccepted" name="termsAccepted" error={e.termsAccepted}>
+        <CheckboxField
+          id="termsAccepted"
+          name="termsAccepted"
+          error={e.termsAccepted}
+          defaultChecked={state.values?.termsAccepted === "on"}
+        >
           I agree to the{" "}
           <Link
             href="/legal/terms"

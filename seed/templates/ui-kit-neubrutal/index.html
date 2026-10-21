@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHUNK: neubrutalist UI kit</title>
+<style>
+  :root { --b: 3px solid #111; --s: 5px 5px 0 #111; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:#fdf6e3; color:#111; font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif; padding:36px 22px; }
+  h1 { font-size:56px; letter-spacing:-2px; } h1 span { background:#ffd23f; padding:0 10px; border:var(--b); box-shadow:var(--s); }
+  .lede { margin:18px 0 32px; font-size:18px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap:22px; max-width:1100px; }
+  .box { background:#fff; border:var(--b); box-shadow:var(--s); padding:20px; border-radius:12px; }
+  .tag { display:inline-block; border:var(--b); padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-bottom:14px; background:#a0e7e5; }
+  .btn { border:var(--b); box-shadow:var(--s); padding:10px 18px; font: 700 16px inherit; font-family:inherit; border-radius:10px; cursor:pointer; margin:0 8px 10px 0; background:#ff6b6b; }
+  .btn:active { transform: translate(5px,5px); box-shadow:none; }
+  .btn.alt { background:#b4f8c8; } .btn.ghost { background:#fff; }
+  input, select { width:100%; border:var(--b); border-radius:10px; padding:11px 12px; font:inherit; margin-bottom:10px; background:#fff; }
+  input:focus, select:focus { outline:none; box-shadow:var(--s); }
+  .alert { border:var(--b); border-radius:10px; padding:12px; background:#ffd23f; font-weight:700; }
+  .tabs { display:flex; gap:0; }
+  .tabs button { flex:1; border:var(--b); background:#fff; padding:10px; font:inherit; font-weight:700; cursor:pointer; margin-left:-3px; }
+  .tabs button:first-child { margin-left:0; border-radius:10px 0 0 10px; } .tabs button:last-child { border-radius:0 10px 10px 0; }
+  .tabs button[aria-selected="true"] { background:#c3b1e1; }
+  .panel { margin-top:12px; font-size:15px; }
+  .stat { font-size:48px; font-weight:900; }
+  .check { display:flex; gap:10px; align-items:center; margin:8px 0; font-weight:700; }
+  .check input { width:22px; height:22px; margin:0; accent-color:#111; }
+</style>
+</head>
+<body>
+<h1><span>CHUNK</span> UI</h1>
+<p class="lede">Loud, friendly components. Thick borders, hard shadows, no gradients.</p>
+<div class="grid">
+  <div class="box"><span class="tag">BUTTONS</span><br><button class="btn" type="button">Do it</button><button class="btn alt" type="button">Maybe</button><button class="btn ghost" type="button">Nah</button></div>
+  <div class="box"><span class="tag">FORM</span><input placeholder="Your name" aria-label="Your name"><select aria-label="Plan"><option>Free plan</option><option>Chunky plan</option></select></div>
+  <div class="box"><span class="tag">ALERT</span><div class="alert">Heads up! This kit has zero dependencies.</div></div>
+  <div class="box"><span class="tag">TABS</span>
+    <div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-p="Overview: everything at a glance.">Overview</button><button type="button" role="tab" aria-selected="false" data-p="Stats: numbers go up. Probably.">Stats</button><button type="button" role="tab" aria-selected="false" data-p="Settings: knobs and switches.">Settings</button></div>
+    <p class="panel" id="panel" role="tabpanel">Overview: everything at a glance.</p>
+  </div>
+  <div class="box" style="background:#b4f8c8"><span class="tag" style="background:#fff">STAT</span><div class="stat">4,218</div><p>new chunky fans this week</p></div>
+  <div class="box"><span class="tag">CHECKLIST</span><label class="check"><input type="checkbox" checked>Thick borders</label><label class="check"><input type="checkbox" checked>Hard shadows</label><label class="check"><input type="checkbox">Subtlety</label></div>
+</div>
+<script>
+  document.querySelectorAll('[role="tab"]').forEach(function (t) { t.onclick = function () { document.querySelectorAll('[role="tab"]').forEach(function (x) { x.setAttribute("aria-selected", x === t); }); document.getElementById("panel").textContent = t.dataset.p; }; });
+</script>
+</body>
+</html>

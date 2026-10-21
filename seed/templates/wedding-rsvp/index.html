@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maya &amp; Theo: September 19</title>
+<style>
+  :root { --paper:#fbf8f2; --ink:#2e2a24; --sage:#8a9a7b; --gold:#b89a5e; --line:#e4dccd; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--paper); color:var(--ink); font-family: "Cormorant Garamond", "Garamond", "Baskerville", Georgia, serif; }
+  .invite { max-width:620px; margin:0 auto; padding:80px 24px; text-align:center; }
+  .sprig { width:90px; margin:0 auto 20px; display:block; }
+  .small { font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif; text-transform:uppercase; letter-spacing:.32em; font-size:12px; color:var(--sage); }
+  h1 { font-weight:400; font-size: clamp(48px, 9vw, 84px); line-height:1; margin:18px 0; }
+  h1 em { color:var(--gold); font-style:italic; font-size:.7em; }
+  .when { font-size:22px; line-height:1.6; }
+  hr { border:0; border-top:1px solid var(--line); width:80px; margin:40px auto; }
+  .details { display:grid; grid-template-columns: 1fr 1fr; gap:24px; text-align:center; font-size:18px; line-height:1.6; }
+  .details b { display:block; font-family: "Gill Sans", Calibri, sans-serif; font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--sage); font-weight:400; margin-bottom:6px; }
+  .rsvp { margin-top:50px; border:1px solid var(--line); padding:30px; background:#fff; }
+  .rsvp h2 { font-weight:400; font-size:32px; margin-bottom:6px; }
+  .rsvp p { color:#6e665a; margin-bottom:20px; }
+  input { width:100%; border:0; border-bottom:1px solid var(--line); padding:10px 4px; font: 20px inherit; font-family:inherit; text-align:center; background:transparent; margin-bottom:18px; color:inherit; }
+  input:focus { outline:none; border-color:var(--gold); }
+  .choice { display:flex; gap:10px; justify-content:center; margin-bottom:22px; }
+  .choice button { border:1px solid var(--line); background:transparent; padding:12px 20px; font: 18px inherit; font-family:inherit; cursor:pointer; color:inherit; }
+  .choice button[aria-pressed="true"] { border-color:var(--gold); background:#f7f0e2; }
+  .send { background:var(--ink); color:var(--paper); border:0; padding:14px 34px; font-family: "Gill Sans", Calibri, sans-serif; letter-spacing:.24em; font-size:13px; text-transform:uppercase; cursor:pointer; }
+  #msg { margin-top:18px; font-size:20px; font-style:italic; min-height:1.5em; }
+  @media (max-width: 560px) { .details { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main class="invite">
+  <svg class="sprig" viewBox="0 0 90 40" aria-hidden="true"><path d="M5 35 Q45 5 85 20" stroke="#8a9a7b" fill="none" stroke-width="1.5"/><g fill="#8a9a7b"><ellipse cx="25" cy="22" rx="7" ry="3" transform="rotate(-30 25 22)"/><ellipse cx="42" cy="15" rx="7" ry="3" transform="rotate(-15 42 15)"/><ellipse cx="60" cy="14" rx="7" ry="3" transform="rotate(10 60 14)"/><ellipse cx="34" cy="28" rx="6" ry="2.6" transform="rotate(20 34 28)"/><ellipse cx="52" cy="23" rx="6" ry="2.6" transform="rotate(30 52 23)"/></g></svg>
+  <p class="small">Together with their families</p>
+  <h1>Maya <em>&amp;</em> Theo</h1>
+  <p class="when">Saturday, the nineteenth of September<br>at four o'clock in the afternoon</p>
+  <hr>
+  <section class="details">
+    <div><b>Ceremony</b>The Old Orchard<br>12 Hillside Lane</div>
+    <div><b>Dinner &amp; dancing</b>The Barn<br>right next door</div>
+  </section>
+  <section class="rsvp" aria-labelledby="rsvp-h">
+    <h2 id="rsvp-h">Kindly reply</h2>
+    <p>by the first of August</p>
+    <label for="name" style="position:absolute;left:-9999px">Your name</label>
+    <input id="name" placeholder="Your name">
+    <div class="choice" role="group" aria-label="Attending">
+      <button type="button" data-a="yes" aria-pressed="false">Joyfully accepts</button>
+      <button type="button" data-a="no" aria-pressed="false">Regretfully declines</button>
+    </div>
+    <button type="button" class="send" id="send">Send reply</button>
+    <p id="msg" role="status"></p>
+  </section>
+</main>
+<script>
+  var answer = null;
+  document.querySelectorAll(".choice button").forEach(function (b) { b.onclick = function () { answer = b.dataset.a; document.querySelectorAll(".choice button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); }); }; });
+  document.getElementById("send").onclick = function () {
+    var name = document.getElementById("name").value.trim(), msg = document.getElementById("msg");
+    if (!name || !answer) { msg.textContent = "Please add your name and choose a reply."; return; }
+    msg.textContent = answer === "yes" ? "Thank you, " + name + ". We can't wait to celebrate with you." : "We'll miss you, " + name + ". Thank you for letting us know.";
+  };
+</script>
+</body>
+</html>

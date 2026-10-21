@@ -8,8 +8,9 @@ import { getDb, isDbConfigured } from "@/lib/db/client";
 import { createProfile, updateProfile, type FieldErrors } from "@/lib/profiles";
 import { rateLimit } from "@/lib/ratelimit";
 import { safeNextPath } from "@/lib/security/hosts";
+import { pickValues, type FormValues } from "@/lib/forms";
 
-export type FormState = { errors: FieldErrors; saved?: boolean };
+export type FormState = { errors: FieldErrors; saved?: boolean; values?: FormValues };
 
 const NOT_CONFIGURED: FormState = {
   errors: { form: "Accounts aren't set up on this deployment yet." },
@@ -31,7 +32,12 @@ export async function createProfileAction(
     termsAccepted: (formData.get("termsAccepted") === "on") as true,
     avatarUrl: ctx.avatarUrl?.startsWith("https://") ? ctx.avatarUrl : null,
   });
-  if (!result.ok) return { errors: result.errors };
+  if (!result.ok) {
+    return {
+      errors: result.errors,
+      values: pickValues(formData, ["handle", "displayName", "ageConfirmed", "termsAccepted"]),
+    };
+  }
 
   redirect(safeNextPath(String(formData.get("next") ?? ""), `/u/${result.value.handle}`));
 }
@@ -45,16 +51,20 @@ export async function updateProfileAction(
   if (!isDbConfigured()) return NOT_CONFIGURED;
 
   const limit = await rateLimit("profile-update", viewer.userId, RATE_LIMITS.profileUpdate);
+  const values = pickValues(formData, ["displayName", "bio", "websiteUrl"]);
   if (!limit.success)
-    return { errors: { form: "You're saving too often. Wait a few minutes and try again." } };
+    return {
+      errors: { form: "You're saving too often. Wait a few minutes and try again." },
+      values,
+    };
 
   const result = await updateProfile(getDb(), viewer, viewer.userId, {
     displayName: String(formData.get("displayName") ?? ""),
     bio: String(formData.get("bio") ?? ""),
     websiteUrl: String(formData.get("websiteUrl") ?? ""),
   });
-  if (!result.ok) return { errors: result.errors };
+  if (!result.ok) return { errors: result.errors, values };
 
   updateTag(`profile:${result.value.handle}`);
-  return { errors: {}, saved: true };
+  return { errors: {}, saved: true, values };
 }

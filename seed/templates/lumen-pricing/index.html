@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen: pricing table</title>
+<style>
+  :root { --bg:#14110f; --card:#1d1916; --line:#3a322b; --gold:#d6b67a; --text:#f3ece2; --muted:#a2978a; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font-family: "Didot", "Bodoni 72", "Playfair Display", Georgia, serif; min-height:100vh; padding:70px 20px; }
+  .head { text-align:center; max-width:640px; margin:0 auto 40px; }
+  h1 { font-weight:400; font-size: clamp(36px, 5vw, 58px); }
+  .head p { font-family: "Helvetica Neue", Arial, sans-serif; color:var(--muted); margin-top:10px; font-weight:300; }
+  .toggle { display:inline-flex; margin-top:26px; border:1px solid var(--line); border-radius:999px; padding:4px; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .toggle button { background:transparent; color:var(--muted); border:0; padding:9px 18px; border-radius:999px; cursor:pointer; font: inherit; font-size:14px; }
+  .toggle button[aria-pressed="true"] { background:var(--gold); color:#14110f; }
+  .save { color:var(--gold); font-size:12px; margin-left:6px; }
+  .plans { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px; max-width:1000px; margin:0 auto; }
+  .plan { background:var(--card); border:1px solid var(--line); border-radius:4px; padding:34px 28px; display:flex; flex-direction:column; }
+  .plan.featured { border-color:var(--gold); position:relative; }
+  .plan.featured::before { content:"Most chosen"; position:absolute; top:-12px; left:28px; background:var(--gold); color:#14110f; font: 600 11px "Helvetica Neue", Arial, sans-serif; letter-spacing:.08em; padding:4px 10px; }
+  .plan h2 { font-weight:400; font-size:26px; }
+  .price { font-size:52px; margin:20px 0 4px; }
+  .price small { font: 300 15px "Helvetica Neue", Arial, sans-serif; color:var(--muted); }
+  .plan ul { list-style:none; padding:0; margin:24px 0 30px; font: 300 15px/1.9 "Helvetica Neue", Arial, sans-serif; color:var(--muted); flex:1; }
+  .plan li::before { content:"— "; color:var(--gold); }
+  .plan button { border:1px solid var(--gold); background:transparent; color:var(--gold); padding:13px; font: 500 14px "Helvetica Neue", Arial, sans-serif; letter-spacing:.06em; cursor:pointer; }
+  .plan.featured button, .plan button:hover { background:var(--gold); color:#14110f; }
+</style>
+</head>
+<body>
+<section class="head">
+  <h1>Light for every room</h1>
+  <p>Smart lighting plans for homes and small studios. Change or cancel anytime.</p>
+  <div class="toggle" role="group" aria-label="Billing period">
+    <button type="button" data-p="m" aria-pressed="true">Monthly</button>
+    <button type="button" data-p="y" aria-pressed="false">Yearly <span class="save">−20%</span></button>
+  </div>
+</section>
+<section class="plans">
+  <article class="plan"><h2>Room</h2><div class="price" data-m="9" data-y="7">$9<small> / month</small></div><ul><li>Up to 6 lights</li><li>Schedules and scenes</li><li>App and voice control</li></ul><button type="button">Choose Room</button></article>
+  <article class="plan featured"><h2>Home</h2><div class="price" data-m="19" data-y="15">$19<small> / month</small></div><ul><li>Up to 40 lights</li><li>Sunrise and sunset sync</li><li>Away mode</li><li>Energy reports</li></ul><button type="button">Choose Home</button></article>
+  <article class="plan"><h2>Studio</h2><div class="price" data-m="49" data-y="39">$49<small> / month</small></div><ul><li>Unlimited lights</li><li>Color-accurate profiles</li><li>Team access</li><li>Priority support</li></ul><button type="button">Choose Studio</button></article>
+</section>
+<script>
+  document.querySelectorAll(".toggle button").forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll(".toggle button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+      document.querySelectorAll(".price").forEach(function (p) {
+        p.innerHTML = "$" + p.dataset[b.dataset.p] + "<small> / month" + (b.dataset.p === "y" ? ", billed yearly" : "") + "</small>";
+      });
+    };
+  });
+</script>
+</body>
+</html>

@@ -6,7 +6,11 @@ import { getDb, isDbConfigured } from "@/lib/db/client";
 import { clientIp, rateLimit } from "@/lib/ratelimit";
 import { joinWaitlist } from "@/lib/waitlist";
 
-export type WaitlistState = { status: "idle" | "success" | "error"; message: string };
+export type WaitlistState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  email?: string;
+};
 
 export async function joinWaitlistAction(
   _prev: WaitlistState,
@@ -25,18 +29,22 @@ export async function joinWaitlistAction(
 
   if (!isDbConfigured()) {
     console.error("Waitlist signup failed: DATABASE_URL is not set");
-    return { status: "error", message: "The waitlist isn't open yet. Check back soon." };
+    return { status: "error", email, message: "The waitlist isn't open yet. Check back soon." };
   }
 
   try {
     const result = await joinWaitlist(getDb(), email);
-    if (!result.ok) return { status: "error", message: result.error };
+    if (!result.ok) return { status: "error", email, message: result.error };
     return {
       status: "success",
       message: "You're on the list. We'll email you when your invite is ready.",
     };
   } catch (err) {
     console.error("Waitlist signup failed", err);
-    return { status: "error", message: "We couldn't save your email. Try again in a moment." };
+    return {
+      status: "error",
+      email,
+      message: "We couldn't save your email. Try again in a moment.",
+    };
   }
 }

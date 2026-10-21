@@ -33,6 +33,7 @@ export function WaitlistForm() {
           type="email"
           required
           autoComplete="email"
+          defaultValue={state.email}
           placeholder="you@example.com"
           aria-invalid={state.status === "error" ? true : undefined}
           aria-describedby={state.status === "error" ? "waitlist-error" : undefined}

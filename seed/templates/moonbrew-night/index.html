@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moonbrew Night</title>
+<style>
+  :root { --bg:#0b1530; --glass:rgba(255,255,255,.08); --line:rgba(255,255,255,.18); --cyan:#3de8ff; --violet:#8b5cf6; --text:#eef3ff; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  .orb { position:fixed; border-radius:50%; filter:blur(70px); opacity:.55; z-index:0; }
+  .o1 { width:420px; height:420px; background:var(--cyan); top:-120px; right:-80px; }
+  .o2 { width:480px; height:480px; background:var(--violet); bottom:-160px; left:-140px; }
+  main, header { position:relative; z-index:1; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:24px 6vw; }
+  .logo { font-weight:600; letter-spacing:.06em; }
+  .pill { border:1px solid var(--line); background:var(--glass); padding:8px 16px; border-radius:999px; font-size:14px; backdrop-filter: blur(10px); }
+  .hero { padding:12vh 6vw 8vh; display:grid; place-items:start; }
+  .card { background:var(--glass); border:1px solid var(--line); border-radius:28px; padding:44px; backdrop-filter: blur(18px); max-width:640px; }
+  h1 { font-weight:200; font-size: clamp(42px, 6.5vw, 82px); line-height:1; letter-spacing:-.02em; }
+  .lede { color:#c6cfe6; font-size:18px; line-height:1.6; margin:20px 0 28px; }
+  .btn { background:transparent; color:var(--cyan); border:1px solid var(--cyan); padding:13px 24px; border-radius:999px; font-size:16px; cursor:pointer; }
+  .btn:hover { background:rgba(61,232,255,.12); }
+  .menu { padding:4vh 6vw 10vh; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+  .item { background:var(--glass); border:1px solid var(--line); border-radius:20px; padding:22px; backdrop-filter: blur(12px); }
+  .item b { display:flex; justify-content:space-between; font-weight:500; font-size:19px; margin-bottom:6px; }
+  .item span { color:#aab4cf; font-size:15px; }
+  #status { margin-top:16px; color:var(--cyan); }
+</style>
+</head>
+<body>
+<div class="orb o1"></div><div class="orb o2"></div>
+<header><div class="logo">moonbrew</div><div class="pill">Open 7pm till late</div></header>
+<main>
+  <section class="hero">
+    <div class="card">
+      <h1>Coffee after dark</h1>
+      <p class="lede">Oat lattes, neon, and nowhere to be. Our van parks somewhere new every night.</p>
+      <button class="btn" type="button" id="notify">Find the van</button>
+      <p id="status" role="status"></p>
+    </div>
+  </section>
+  <section class="menu" aria-label="Menu">
+    <div class="item"><b>Moon latte <em>$5</em></b><span>Oat milk, honey, sea salt</span></div>
+    <div class="item"><b>Night pour-over <em>$4</em></b><span>Single origin, brewed slow</span></div>
+    <div class="item"><b>Cardamom bun <em>$3.5</em></b><span>Baked at 5pm, gone by 9</span></div>
+    <div class="item"><b>Decaf cocoa <em>$4.5</em></b><span>For the sleepy ones</span></div>
+  </section>
+</main>
+<script>
+  document.getElementById("notify").addEventListener("click", function () {
+    document.getElementById("status").textContent = "Tonight: Linden & 4th, from 7pm.";
+  });
+</script>
+</body>
+</html>

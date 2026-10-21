@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Lab: palette generator</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { font-family: "SF Pro Text", "Helvetica Neue", Arial, sans-serif; background:#fafafa; color:#111; min-height:100vh; display:flex; flex-direction:column; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid #e5e5e5; gap:12px; flex-wrap:wrap; }
+  header b { font-size:17px; }
+  .controls { display:flex; gap:8px; align-items:center; font-size:14px; }
+  select, button { font:inherit; padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+  button.primary { background:#111; color:#fff; border-color:#111; }
+  .swatches { flex:1; display:grid; grid-template-columns: repeat(5, 1fr); min-height:70vh; }
+  .sw { display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:24px 8px; gap:8px; border:0; cursor:pointer; font: 600 15px "SF Mono", Menlo, monospace; }
+  .sw small { font-family: "Helvetica Neue", Arial, sans-serif; font-weight:400; opacity:.7; }
+  .lock { font-size:13px; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .hint { padding:12px 22px; font-size:13px; color:#666; }
+  @media (max-width: 640px) { .swatches { grid-template-columns:1fr; } .sw { flex-direction:row; justify-content:space-between; padding:18px; } }
+</style>
+</head>
+<body>
+<header>
+  <b>Color Lab</b>
+  <div class="controls">
+    <label for="mode">Harmony</label>
+    <select id="mode"><option value="analog">Analogous</option><option value="comp">Complementary</option><option value="triad">Triadic</option><option value="mono">Monochrome</option></select>
+    <button type="button" class="primary" id="gen">Generate</button>
+  </div>
+</header>
+<main class="swatches" id="sw"></main>
+<p class="hint" id="hint">Press space to generate. Click a color to lock it.</p>
+<script>
+  var locked = [false, false, false, false, false], colors = [];
+  function hsl(h, s, l) { s /= 100; l /= 100; var k = function (n) { return (n + h / 30) % 12; }, a = s * Math.min(l, 1 - l);
+    var f = function (n) { return Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))); };
+    return "#" + [f(0), f(8), f(4)].map(function (v) { return v.toString(16).padStart(2, "0"); }).join(""); }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; }
+  function gen() {
+    var mode = document.getElementById("mode").value, base = Math.random() * 360;
+    var hues = { analog: [0, 20, 40, -20, -40], comp: [0, 180, 15, 195, 0], triad: [0, 120, 240, 0, 120], mono: [0, 0, 0, 0, 0] }[mode];
+    for (var i = 0; i < 5; i++) {
+      if (locked[i]) continue;
+      var l = mode === "mono" ? 18 + i * 17 : 35 + Math.random() * 40;
+      colors[i] = hsl((base + hues[i] + 360) % 360, 45 + Math.random() * 40, l);
+    }
+    render();
+  }
+  function render() {
+    var box = document.getElementById("sw"); box.innerHTML = "";
+    colors.forEach(function (c, i) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "sw"; b.style.background = c; b.style.color = lum(c) > .55 ? "#111" : "#fff";
+      b.setAttribute("aria-pressed", locked[i]); b.setAttribute("aria-label", c + (locked[i] ? ", locked" : ""));
+      b.innerHTML = '<span class="lock">' + (locked[i] ? "Locked" : "") + "</span>" + c.toUpperCase();
+      b.onclick = function () { locked[i] = !locked[i]; render(); }; box.appendChild(b);
+    });
+  }
+  document.getElementById("gen").onclick = gen;
+  document.addEventListener("keydown", function (e) { if (e.code === "Space" && e.target.tagName !== "SELECT") { e.preventDefault(); gen(); } });
+  gen();
+</script>
+</body>
+</html>

@@ -197,7 +197,7 @@ describe("row level security", () => {
     const rls = await t.pg.query<{ relname: string; relrowsecurity: boolean }>(
       `select c.relname, c.relrowsecurity from pg_class c
        join pg_namespace n on n.oid = c.relnamespace
-       where n.nspname = 'public' and c.relkind = 'r' and c.relname <> 'schema_migrations'`,
+       where n.nspname = 'public' and c.relkind = 'r'`,
     );
     expect(rls.rows.length).toBeGreaterThan(0);
     for (const row of rls.rows) expect(row, row.relname).toMatchObject({ relrowsecurity: true });

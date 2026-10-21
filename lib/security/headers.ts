@@ -17,9 +17,9 @@ export function appSecurityHeaders(isHttps: boolean): Record<string, string> {
 
 /**
  * Headers for anything served from the preview origin. `sandbox` in the CSP applies even if
- * someone opens a preview URL directly instead of through our iframe.
+ * someone opens a preview URL directly instead of through our iframe. Only the app may frame it.
  */
-export function previewSecurityHeaders(): Record<string, string> {
+export function previewSecurityHeaders(appOrigin: string): Record<string, string> {
   return {
     "Content-Security-Policy": [
       "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
@@ -27,12 +27,16 @@ export function previewSecurityHeaders(): Record<string, string> {
       "form-action 'none'",
       "base-uri 'self'",
       "object-src 'none'",
+      `frame-ancestors ${appOrigin}`,
     ].join("; "),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "X-Robots-Tag": "noindex, nofollow",
+    // Sandboxed documents have an opaque origin, so module scripts and fonts load as CORS requests.
+    "Access-Control-Allow-Origin": "*",
     "Cross-Origin-Resource-Policy": "cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
-    "Cache-Control": "public, max-age=60",
+    // Short so takedowns stop serving quickly.
+    "Cache-Control": "public, max-age=300",
   };
 }

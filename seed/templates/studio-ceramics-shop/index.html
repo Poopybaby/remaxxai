@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiln &amp; Clay: small-batch ceramics</title>
+<style>
+  :root { --bg:#f4ede4; --ink:#2d241d; --clay:#b8683f; --stone:#d9cbbb; --muted:#7a6a5c; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--ink); font-family: "Optima", "Candara", "Segoe UI", sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:22px 5vw; }
+  .logo { font-family: Georgia, serif; font-size:24px; letter-spacing:.02em; }
+  .cartbtn { background:transparent; border:1px solid var(--ink); border-radius:999px; padding:9px 16px; font:inherit; cursor:pointer; color:inherit; }
+  .intro { padding:4vh 5vw 3vh; display:flex; justify-content:space-between; align-items:end; gap:20px; flex-wrap:wrap; }
+  .intro h1 { font-family: Georgia, serif; font-weight:400; font-size: clamp(34px, 5vw, 60px); max-width:16ch; line-height:1.05; }
+  .intro p { color:var(--muted); max-width:34ch; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:28px 22px; padding:3vh 5vw 10vh; }
+  .product .img { aspect-ratio:4/5; background:var(--stone); display:grid; place-items:center; border-radius:6px; }
+  .pot { width:52%; aspect-ratio: 3/4; border-radius: 42% 42% 30% 30% / 30% 30% 22% 22%; box-shadow: inset -14px -10px 0 #0000001a; }
+  .product h3 { font-weight:400; font-size:17px; margin-top:12px; }
+  .row { display:flex; justify-content:space-between; align-items:center; margin-top:6px; color:var(--muted); }
+  .row button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:8px 14px; font:inherit; font-size:14px; cursor:pointer; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(380px, 92vw); background:#fffaf4; box-shadow: -20px 0 60px #2d241d33; padding:26px; transform: translateX(105%); transition: transform .3s ease; display:flex; flex-direction:column; z-index:5; }
+  .drawer.open { transform:none; }
+  .drawer h2 { font-family: Georgia, serif; font-weight:400; }
+  .lines { flex:1; margin:20px 0; overflow:auto; }
+  .line { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--stone); }
+  .total { display:flex; justify-content:space-between; font-size:18px; margin-bottom:14px; }
+  .drawer .checkout { background:var(--clay); color:#fff; border:0; padding:14px; border-radius:6px; font:inherit; cursor:pointer; }
+  .close { align-self:flex-end; background:none; border:0; font-size:26px; cursor:pointer; color:inherit; }
+  #note { color:var(--muted); font-size:14px; margin-top:10px; min-height:1.2em; }
+  @media (prefers-reduced-motion: reduce) { .drawer { transition:none; } }
+</style>
+</head>
+<body>
+<header><div class="logo">Kiln &amp; Clay</div><button type="button" class="cartbtn" id="open">Cart (<span id="count">0</span>)</button></header>
+<section class="intro"><h1>Everyday ceramics, thrown by hand in small batches</h1><p>Each piece is a little different. Dishwasher safe, made to be used daily.</p></section>
+<section class="grid" id="grid"></section>
+<aside class="drawer" id="drawer" aria-label="Cart" aria-hidden="true">
+  <button type="button" class="close" id="close" aria-label="Close cart">×</button>
+  <h2>Your cart</h2>
+  <div class="lines" id="lines"></div>
+  <div class="total"><span>Total</span><span id="total">$0</span></div>
+  <button type="button" class="checkout" id="checkout">Checkout</button>
+  <p id="note" role="status"></p>
+</aside>
+<script>
+  var products = [["Morning mug", 32, "#c9a27e"], ["Speckled bowl", 38, "#e3d6c5"], ["Bud vase", 26, "#8e9c84"], ["Pour-over cone", 44, "#b8683f"], ["Serving plate", 58, "#d8c3a5"], ["Salt cellar", 18, "#6f6253"]];
+  var cart = {};
+  document.getElementById("grid").innerHTML = products.map(function (p, i) {
+    return '<article class="product"><div class="img"><div class="pot" style="background:' + p[2] + '"></div></div><h3>' + p[0] + '</h3><div class="row"><span>$' + p[1] + '</span><button type="button" data-i="' + i + '">Add</button></div></article>';
+  }).join("");
+  function render() {
+    var ids = Object.keys(cart), count = 0, total = 0;
+    document.getElementById("lines").innerHTML = ids.length ? ids.map(function (i) { var p = products[i]; count += cart[i]; total += p[1] * cart[i]; return '<div class="line"><span>' + p[0] + " × " + cart[i] + "</span><span>$" + p[1] * cart[i] + "</span></div>"; }).join("") : "<p>Nothing here yet.</p>";
+    document.getElementById("count").textContent = count; document.getElementById("total").textContent = "$" + total;
+  }
+  function open(v) { var d = document.getElementById("drawer"); d.classList.toggle("open", v); d.setAttribute("aria-hidden", !v); }
+  document.getElementById("grid").addEventListener("click", function (e) { var b = e.target.closest("button[data-i]"); if (!b) return; cart[b.dataset.i] = (cart[b.dataset.i] || 0) + 1; render(); open(true); });
+  document.getElementById("open").onclick = function () { open(true); };
+  document.getElementById("close").onclick = function () { open(false); };
+  document.getElementById("checkout").onclick = function () { document.getElementById("note").textContent = "This is a template: connect your own checkout here."; };
+  render();
+</script>
+</body>
+</html>

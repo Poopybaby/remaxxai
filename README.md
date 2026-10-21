@@ -2,7 +2,7 @@
 
 A community gallery of AI-built templates plus a browser editor for remixing them. See [PLAN.md](./PLAN.md) for the architecture, data model and phase checklist.
 
-**Status:** Phase 1 (Foundation) complete: auth, profiles, landing page with waitlist, legal drafts, storage helpers, preview-origin isolation, CI.
+**Status:** Phases 1 (Foundation) and 2 (Gallery) complete: auth, profiles, landing page, uploads with licenses and rights confirmation, sandboxed previews, source browser, likes, saves, follows, filters, reports, DMCA form, admin review queue, and 29 starter templates.
 
 ## Stack
 
@@ -17,6 +17,7 @@ pnpm install
 cp .env.example .env.local     # then fill in the values, see below
 pnpm db:migrate                # create tables
 pnpm storage:setup             # create storage buckets
+pnpm seed                      # load the 29 starter templates
 pnpm dev                       # http://localhost:3000
 ```
 
@@ -37,6 +38,7 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 | `SUPABASE_SECRET_KEY`                                | Storage admin (server) | Same page (secret / service_role key)                    |
 | `DATABASE_URL`                                       | Everything with data   | Supabase → Connect → connection string                   |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits     | Upstash console (optional until launch)                  |
+| `OPENAI_API_KEY`                                     | Upload moderation      | platform.openai.com (optional now; uploads are marked unchecked without it) |
 
 ## Supabase setup (one time)
 
@@ -47,7 +49,8 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
    - GitHub: GitHub → Settings → Developer settings → OAuth Apps → New, with the same Supabase callback URL.
 4. **Auth → SMTP:** before launch, connect a real email sender (e.g. Resend). Supabase's built-in mailer is heavily rate-limited.
 5. Run `pnpm db:migrate` and `pnpm storage:setup`. No terminal access to your database? Run `pnpm db:setup-sql`, paste the output into Supabase → SQL Editor and click Run; it does the same thing and is safe to run twice.
-6. Make yourself an admin after you've signed up: `pnpm db:make-admin <your-handle>`.
+6. Load the starter templates: `pnpm seed`, or `pnpm seed:sql` and paste the output into the SQL Editor.
+7. Make yourself an admin after you've signed up: `pnpm db:make-admin <your-handle>`.
 
 ## Scripts
 
@@ -61,18 +64,21 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 | `pnpm db:migrate`                        | Applies new files in `db/migrations` to `DATABASE_URL`                                                                 |
 | `pnpm db:make-admin <handle> [--revoke]` | Grants or removes the admin role                                                                                       |
 | `pnpm storage:setup`                     | Creates or updates the storage buckets in `config/limits.ts`                                                           |
+| `pnpm seed` / `pnpm seed:sql`             | Loads the starter templates into `DATABASE_URL`, or prints the SQL to paste. Safe to run again                           |
+| `pnpm db:setup-sql`                      | Prints all migrations plus storage buckets as one SQL script for the Supabase SQL Editor                                |
 | `pnpm check:bundle`                      | After a build, fails if a secret-looking value is in the browser bundle                                                |
-| `pnpm ci`                                | Everything CI runs, in order                                                                                           |
+| `pnpm verify`                              | Everything CI runs, in order                                                                                           |
 
 ## Project layout
 
 ```
-app/            Routes (landing, login, onboarding, settings, profiles, legal, preview origin)
-components/     UI kit, layout, landing visuals
-config/         One place for site settings, legal versions, limits and buckets
-lib/            auth (permissions, viewer), db (schema, migrations), storage, rate limiting, security
+app/            Routes (landing, explore, project pages, upload, profiles, saved, admin, legal, preview origin)
+components/     UI kit, layout, gallery cards, project page pieces, landing visuals
+config/         Site settings, legal versions, licenses and remix rules, tools/categories/styles, limits
+lib/            auth, db, licensing (remix rules, credit chain), projects, upload (validate, scan), moderation, seed, security
 db/migrations/  Plain SQL migrations, the source of truth for the schema
-scripts/        migrate, make-admin, storage setup, bundle secret scan
+scripts/        migrate, seed, make-admin, storage setup, setup SQL, bundle secret scan
+seed/           Starter template files and their catalog (titles, licenses, tags)
 tests/          unit/ and integration/ (PGlite)
 ```
 
@@ -83,6 +89,20 @@ tests/          unit/ and integration/ (PGlite)
 - **Untrusted code never runs on the server.** Project previews are served as plain files from a separate domain with a `sandbox` CSP, and only ever run in the visitor's browser. The app domain refuses to be framed.
 - **Rate limits** on every write endpoint (Upstash when configured, in-memory otherwise).
 
+- **Uploads are untrusted.** Every file is checked by path, type, size and content (magic bytes, valid UTF-8), and scanned for leaked secrets (rejected) and malware or phishing patterns (held for admin review). Text and the cover image go through OpenAI moderation when a key is set.
+- **Licenses are enforced.** Every upload needs a license and a rights confirmation, recorded per project. Remixes can only use licenses every ancestor allows (`config/licenses.ts`, tested in `tests/unit/licensing.test.ts`).
+
+## How uploads and previews work
+
+- Uploads are static sites: HTML, CSS, JS, images, fonts and media, up to 4 MB (Vercel's request limit). Projects that need a build step are asked to upload their build output.
+- Files are stored once per unique content (by SHA-256) in Postgres, so remixes don't copy bytes. Larger files can move to object storage later through `blobs.storage_key`.
+- Previews load from `<preview origin>/v/<version id>/<path>` inside a sandboxed iframe. Only published projects are served there.
+
+## Moderation
+
+- Reports and DMCA notices land in `/admin` (admins only). Admins can dismiss a report, remove a project, or approve held uploads.
+- A copyright removal also hides that project's published remixes until an admin reviews them, and their credit line shows "original removed".
+
 ## Coming in later phases
 
-How to add an AI model (Phase 4) and how to run the seed script (Phase 2) will be documented here when those phases land.
+How to add an AI model will be documented here with the remix editor (Phase 4).

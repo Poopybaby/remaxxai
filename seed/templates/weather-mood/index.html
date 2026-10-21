@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather card component</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; display:grid; place-items:center; font-family: "Helvetica Neue", Arial, sans-serif; color:#fff; transition: background 1s; padding:20px; }
+  body.sunny { background: linear-gradient(160deg, #ffb347, #ff6f61); }
+  body.rain { background: linear-gradient(160deg, #4b6584, #1e3799); }
+  body.night { background: linear-gradient(160deg, #0f2027, #2c5364); }
+  body.snow { background: linear-gradient(160deg, #a1c4fd, #c2e9fb); color:#1b2a4a; }
+  .card { width:min(360px, 100%); background: rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:30px; padding:28px; backdrop-filter: blur(16px); box-shadow: 0 30px 60px rgba(0,0,0,.18); }
+  .top { display:flex; justify-content:space-between; font-size:15px; opacity:.9; }
+  .icon { font-size:88px; line-height:1; margin:18px 0 6px; height:96px; }
+  .temp { font-size:84px; font-weight:200; letter-spacing:-4px; }
+  .desc { font-size:20px; margin-top:4px; }
+  .hours { display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin-top:24px; text-align:center; font-size:13px; }
+  .hours div { background: rgba(255,255,255,.14); border-radius:14px; padding:10px 0; }
+  .hours b { display:block; font-size:17px; margin-top:4px; font-weight:500; }
+  .modes { display:flex; gap:6px; margin-top:20px; }
+  .modes button { flex:1; border:1px solid rgba(255,255,255,.4); background:transparent; color:inherit; border-radius:999px; padding:8px 0; cursor:pointer; font:inherit; font-size:13px; }
+  .modes button[aria-pressed="true"] { background: rgba(255,255,255,.3); }
+</style>
+</head>
+<body class="sunny">
+<main class="card">
+  <div class="top"><span>Porto</span><span id="day"></span></div>
+  <div class="icon" id="icon" aria-hidden="true"></div>
+  <div class="temp" id="temp"></div>
+  <div class="desc" id="desc"></div>
+  <div class="hours" id="hours"></div>
+  <div class="modes" role="group" aria-label="Preview weather">
+    <button type="button" data-m="sunny" aria-pressed="true">Sun</button><button type="button" data-m="rain" aria-pressed="false">Rain</button><button type="button" data-m="snow" aria-pressed="false">Snow</button><button type="button" data-m="night" aria-pressed="false">Night</button>
+  </div>
+</main>
+<script>
+  var modes = { sunny: ["☀️", 27, "Bright and warm"], rain: ["🌧️", 14, "Steady rain all afternoon"], snow: ["❄️", -2, "Light snow, quiet streets"], night: ["🌙", 11, "Clear sky, a little breeze"] };
+  document.getElementById("day").textContent = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  function set(m) {
+    var d = modes[m]; document.body.className = m;
+    document.getElementById("icon").textContent = d[0]; document.getElementById("temp").textContent = d[1] + "°"; document.getElementById("desc").textContent = d[2];
+    document.getElementById("hours").innerHTML = [1, 2, 3, 4, 5].map(function (h) { return "<div>" + (h * 2 + 12) % 24 + ":00<b>" + (d[1] + (h % 3) - 1) + "°</b></div>"; }).join("");
+    document.querySelectorAll(".modes button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.m === m); });
+  }
+  document.querySelectorAll(".modes button").forEach(function (b) { b.onclick = function () { set(b.dataset.m); }; });
+  set("sunny");
+</script>
+</body>
+</html>

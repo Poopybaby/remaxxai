@@ -47,7 +47,9 @@ async function main() {
 
   out.push("-- Storage buckets");
   for (const b of Object.values(STORAGE_BUCKETS)) {
-    const mimes = b.allowedMimeTypes ? `array[${b.allowedMimeTypes.map(quote).join(", ")}]` : "null";
+    const mimes = b.allowedMimeTypes
+      ? `array[${b.allowedMimeTypes.map(quote).join(", ")}]`
+      : "null";
     out.push(
       "insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)",
       `values (${quote(b.id)}, ${quote(b.id)}, ${b.public}, ${b.fileSizeLimit}, ${mimes})`,

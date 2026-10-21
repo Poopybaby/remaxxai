@@ -1,0 +1,23 @@
+* { box-sizing: border-box; margin: 0; }
+body { font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: #f3f4f8; color: #1c2033; min-height: 100vh; }
+.sr { position: absolute; left: -9999px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 24px; flex-wrap: wrap; }
+h1 { font-size: 24px; }
+.add { display: flex; gap: 8px; }
+.add input { border: 1px solid #d6d9e4; border-radius: 10px; padding: 10px 12px; font: inherit; min-width: 240px; background: #fff; }
+.add button { background: #1c2033; color: #fff; border: 0; border-radius: 10px; padding: 0 16px; font: inherit; cursor: pointer; }
+.board { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 16px; padding: 0 24px; overflow-x: auto; }
+.lane { background: #e7e9f1; border-radius: 16px; padding: 14px; min-height: 380px; transition: background 0.15s; }
+.lane.over { background: #d9def0; }
+.lane h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: #5a6078; margin-bottom: 12px; }
+.count { background: #fff; border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
+.cards { display: flex; flex-direction: column; gap: 10px; min-height: 300px; }
+.card { background: #fff; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px #1c203312; cursor: grab; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card.dragging { opacity: 0.4; }
+.card .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; }
+.card p { font-size: 15px; }
+.moves { display: flex; gap: 4px; }
+.moves button { border: 1px solid #e1e4ee; background: #f7f8fb; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; color: #5a6078; }
+.lane[data-lane="done"] .card p { text-decoration: line-through; color: #8a90a6; }
+.hint { padding: 16px 24px; color: #7a8099; font-size: 13px; }
+@media (max-width: 760px) { .board { grid-template-columns: 1fr; } .add input { min-width: 0; flex: 1; } .add { width: 100%; } }

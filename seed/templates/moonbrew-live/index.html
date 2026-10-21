@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOONBREW LIVE</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { background:#ffe14d; color:#000; font-family: Impact, "Arial Black", "Helvetica Neue", sans-serif; }
+  .bar { display:flex; justify-content:space-between; border-bottom:8px solid #000; padding:18px 5vw; font-size:20px; letter-spacing:.04em; }
+  h1 { font-size: clamp(72px, 17vw, 240px); line-height:.82; padding:4vw 5vw 0; letter-spacing:-.01em; }
+  .stripe { height:60px; background:#e8361f; transform: rotate(-2deg); margin:4vw -2vw; display:flex; align-items:center; overflow:hidden; white-space:nowrap; color:#ffe14d; font-size:28px; }
+  .stripe span { animation: run 18s linear infinite; padding-left:100%; }
+  @keyframes run { to { transform: translateX(-100%); } }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); border-top:8px solid #000; }
+  .cell { padding:28px 5vw; border-right:8px solid #000; border-bottom:8px solid #000; font-family: "Arial Black", Arial, sans-serif; }
+  .cell b { display:block; font-size:34px; font-family: Impact, "Arial Black", sans-serif; }
+  .cta { padding:6vw 5vw; display:flex; gap:20px; flex-wrap:wrap; align-items:center; }
+  button { background:#000; color:#ffe14d; border:0; font: 28px Impact, "Arial Black", sans-serif; padding:18px 30px; cursor:pointer; }
+  button:active { transform: translate(3px,3px); }
+  #status { font: 700 20px Arial, sans-serif; }
+  @media (prefers-reduced-motion: reduce) { .stripe span { animation:none; padding-left:5vw; } }
+</style>
+</head>
+<body>
+<div class="bar"><span>MOONBREW</span><span>FRI 9PM</span></div>
+<h1>COFFEE<br>AFTER<br>DARK</h1>
+<div class="stripe" aria-hidden="true"><span>LIVE DJ ★ OAT LATTES ★ CARDAMOM BUNS ★ NO COVER ★ LIVE DJ ★ OAT LATTES ★ CARDAMOM BUNS ★ NO COVER</span></div>
+<div class="grid">
+  <div class="cell"><b>MOON LATTE</b>$5. OAT, HONEY, SALT.</div>
+  <div class="cell"><b>NIGHT POUR</b>$4. BREWED SLOW.</div>
+  <div class="cell"><b>CARDAMOM BUN</b>$3.50. GONE BY 9.</div>
+</div>
+<div class="cta">
+  <button type="button" id="go">FIND THE VAN</button>
+  <p id="status" role="status"></p>
+</div>
+<script>
+  document.getElementById("go").addEventListener("click", function () {
+    document.getElementById("status").textContent = "LINDEN & 4TH. BE THERE.";
+  });
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ export function ProfileSettingsForm(props: {
         <Input
           id="displayName"
           name="displayName"
-          defaultValue={props.displayName}
+          defaultValue={state.values?.displayName ?? props.displayName}
           maxLength={50}
           required
           aria-invalid={e.displayName ? true : undefined}
@@ -32,7 +32,7 @@ export function ProfileSettingsForm(props: {
         <Textarea
           id="bio"
           name="bio"
-          defaultValue={props.bio}
+          defaultValue={state.values?.bio ?? props.bio}
           maxLength={280}
           aria-invalid={e.bio ? true : undefined}
           aria-describedby={e.bio ? "bio-error" : "bio-hint"}
@@ -45,7 +45,7 @@ export function ProfileSettingsForm(props: {
           type="url"
           inputMode="url"
           placeholder="https://"
-          defaultValue={props.websiteUrl}
+          defaultValue={state.values?.websiteUrl ?? props.websiteUrl}
           aria-invalid={e.websiteUrl ? true : undefined}
           aria-describedby={e.websiteUrl ? "websiteUrl-error" : undefined}
         />

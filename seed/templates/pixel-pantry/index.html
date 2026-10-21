@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Pantry: recipe scaler</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { background:#1d2b53; color:#fff1e8; font-family: "Courier New", Courier, monospace; min-height:100vh; padding:24px; image-rendering: pixelated; }
+  .card { max-width:620px; margin:0 auto; background:#7e2553; border:6px solid #fff1e8; box-shadow: 10px 10px 0 #000; padding:24px; }
+  h1 { font-size:28px; text-transform:uppercase; letter-spacing:2px; color:#ffec27; text-shadow: 3px 3px 0 #000; }
+  .sub { margin:6px 0 22px; color:#ffccaa; }
+  .serv { display:flex; align-items:center; gap:12px; background:#000; padding:12px; margin-bottom:18px; }
+  .serv button { width:44px; height:44px; font: bold 26px "Courier New", monospace; background:#ffec27; color:#000; border:0; cursor:pointer; box-shadow: 4px 4px 0 #ab5236; }
+  .serv button:active { transform: translate(4px,4px); box-shadow:none; }
+  #n { font-size:28px; min-width:2ch; text-align:center; color:#00e436; }
+  ul { list-style:none; padding:0; }
+  li { display:flex; justify-content:space-between; padding:10px 4px; border-bottom:3px dotted #ff77a8; font-size:17px; }
+  li b { color:#ffec27; }
+  .steps { margin-top:20px; background:#1d2b53; padding:14px 18px; border:4px solid #29adff; }
+  .steps li { border:0; display:list-item; list-style: square inside; padding:5px 0; }
+  .hp { display:flex; gap:4px; margin-top:16px; }
+  .hp span { width:18px; height:18px; background:#ff004d; box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Pixel Pantry</h1>
+  <p class="sub">LVL 2 RECIPE: CRISPY CHICKPEA TACOS</p>
+  <div class="serv"><button type="button" id="minus" aria-label="Fewer servings">-</button><span id="n">2</span><span>SERVINGS</span><button type="button" id="plus" aria-label="More servings">+</button></div>
+  <ul id="list"></ul>
+  <ol class="steps">
+    <li>Roast chickpeas at 220°C for 20 min.</li>
+    <li>Toss with paprika, cumin and lime.</li>
+    <li>Warm tortillas. Stack. Crunch. Win.</li>
+  </ol>
+  <div class="hp" aria-label="Difficulty: 3 of 5"><span></span><span></span><span></span></div>
+</main>
+<script>
+  var base = 2, n = 2, items = [["Chickpeas (can)", 1, ""], ["Tortillas", 4, ""], ["Smoked paprika", 1, " tsp"], ["Lime", 0.5, ""], ["Red cabbage", 80, " g"], ["Yogurt", 4, " tbsp"]];
+  function fmt(x) { return Math.round(x * 100) / 100; }
+  function render() {
+    document.getElementById("n").textContent = n;
+    document.getElementById("list").innerHTML = items.map(function (it) {
+      return "<li><span>" + it[0] + "</span><b>" + fmt(it[1] * n / base) + it[2] + "</b></li>";
+    }).join("");
+  }
+  document.getElementById("plus").onclick = function () { if (n < 12) { n++; render(); } };
+  document.getElementById("minus").onclick = function () { if (n > 1) { n--; render(); } };
+  render();
+</script>
+</body>
+</html>

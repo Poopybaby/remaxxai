@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Paper Trail: a small magazine</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { background:#faf7f0; color:#1f1b16; font-family: Georgia, "Times New Roman", serif; }
+  .mast { text-align:center; padding:40px 20px 18px; border-bottom:3px double #1f1b16; margin:0 5vw; }
+  .mast h1 { font-size: clamp(44px, 8vw, 96px); font-weight:400; letter-spacing:-.02em; }
+  .mast p { font-family: system-ui, sans-serif; font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-top:6px; }
+  nav { display:flex; justify-content:center; gap:26px; padding:12px; border-bottom:1px solid #1f1b16; margin:0 5vw; font-family: system-ui, sans-serif; font-size:14px; }
+  nav button { background:none; border:0; font:inherit; cursor:pointer; color:#1f1b16; padding:4px 2px; }
+  nav button[aria-pressed="true"] { border-bottom:2px solid #b3261e; }
+  .grid { display:grid; grid-template-columns: 2fr 1fr 1fr; gap:0; margin:24px 5vw 60px; }
+  article { padding:18px 22px; border-right:1px solid #d9d2c3; }
+  article:last-child { border-right:0; }
+  .lead h2 { font-size:42px; line-height:1.05; font-weight:400; margin:8px 0 14px; }
+  h2 { font-size:22px; font-weight:400; line-height:1.2; margin:8px 0; }
+  .kicker { font-family: system-ui, sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#b3261e; }
+  p.body { line-height:1.7; font-size:17px; }
+  .lead p.body::first-letter { float:left; font-size:64px; line-height:.85; padding:4px 8px 0 0; }
+  .art { aspect-ratio:4/3; background: linear-gradient(135deg, #d8cbb0, #b8a98a); margin-bottom:12px; position:relative; }
+  .art::after { content:""; position:absolute; inset:18% 30%; border-radius:50%; background:#1f1b1622; }
+  .byline { font-family: system-ui, sans-serif; font-size:13px; color:#6b6355; margin-top:10px; }
+  [hidden] { display:none !important; }
+  @media (max-width: 860px) { .grid { grid-template-columns:1fr; } article { border-right:0; border-bottom:1px solid #d9d2c3; } }
+</style>
+</head>
+<body>
+<header class="mast"><h1>The Paper Trail</h1><p>Slow stories about small places · Issue 14</p></header>
+<nav aria-label="Sections">
+  <button type="button" data-f="all" aria-pressed="true">All</button>
+  <button type="button" data-f="places" aria-pressed="false">Places</button>
+  <button type="button" data-f="food" aria-pressed="false">Food</button>
+  <button type="button" data-f="people" aria-pressed="false">People</button>
+</nav>
+<main class="grid">
+  <article class="lead" data-tag="places">
+    <div class="art" aria-hidden="true"></div>
+    <span class="kicker">Places</span>
+    <h2>The last ferry captain on Lake Merrow</h2>
+    <p class="body">Every morning at six, Ada Lindqvist starts an engine older than she is and carries eleven passengers, two bicycles and the mail across four kilometers of cold water. The bridge opens next spring.</p>
+    <p class="byline">By Tomas Reyes · 9 min read</p>
+  </article>
+  <article data-tag="food">
+    <div class="art" aria-hidden="true" style="background:linear-gradient(135deg,#e7c3a1,#c99a6e)"></div>
+    <span class="kicker">Food</span>
+    <h2>A bakery that only opens when it rains</h2>
+    <p class="byline">By June Park · 5 min read</p>
+  </article>
+  <article data-tag="people">
+    <div class="art" aria-hidden="true" style="background:linear-gradient(135deg,#bfcbbd,#8fa38c)"></div>
+    <span class="kicker">People</span>
+    <h2>The woman who names every storm in her village</h2>
+    <p class="byline">By Sam Idowu · 6 min read</p>
+  </article>
+</main>
+<script>
+  document.querySelectorAll("nav button").forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll("nav button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+      document.querySelectorAll("article").forEach(function (a) { a.hidden = b.dataset.f !== "all" && a.dataset.tag !== b.dataset.f; });
+    };
+  });
+</script>
+</body>
+</html>

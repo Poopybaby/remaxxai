@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    qualities: [75],
+    // Covers are served from our own /media route (uploads) and /seed (starter templates).
+    localPatterns: [
+      { pathname: "/media/**", search: "" },
+      { pathname: "/seed/**", search: "" },
+    ],
     remotePatterns: [
       // OAuth provider avatars (Google, GitHub) and Supabase Storage public buckets.
       { protocol: "https", hostname: "lh3.googleusercontent.com" },

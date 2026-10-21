@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DmcaForm } from "@/components/legal/dmca-form";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Copyright & DMCA" };
@@ -15,8 +16,8 @@ export default function DmcaPage() {
 
       <h2>Filing a takedown notice</h2>
       <p>
-        Email <a href={`mailto:${email}`}>{email}</a>. A reporting form on every template page is
-        coming with the gallery. Your notice must include:
+        Use the form below, or email <a href={`mailto:${email}`}>{email}</a>. Your notice must
+        include:
       </p>
       <ol>
         <li>Your physical or electronic signature.</li>
@@ -32,6 +33,8 @@ export default function DmcaPage() {
           that you are the copyright owner or authorized to act on their behalf.
         </li>
       </ol>
+
+      <DmcaForm />
 
       <h2>What happens next</h2>
       <p>

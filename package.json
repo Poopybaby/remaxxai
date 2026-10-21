@@ -17,7 +17,9 @@
     "storage:setup": "tsx scripts/setup-storage.ts",
     "check:bundle": "tsx scripts/check-client-bundle.ts",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle",
-    "db:setup-sql": "tsx scripts/setup-sql.ts"
+    "db:setup-sql": "tsx scripts/setup-sql.ts",
+    "seed": "tsx scripts/seed.ts",
+    "seed:sql": "tsx scripts/seed.ts --sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -26,6 +28,7 @@
     "@upstash/redis": "^1.39.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
+    "fflate": "^0.8.3",
     "lucide-react": "^1.61.0",
     "next": "16.4.2",
     "postgres": "^3.4.9",

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tidepool: gentle habit tracker</title>
+<style>
+  :root { --bg:#eef4ee; --card:#fbfdf9; --ink:#22382b; --muted:#6b8072; --sea:#5f9e8f; --sand:#e9dcc3; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding:32px 20px; }
+  .app { max-width:560px; margin:0 auto; }
+  h1 { font-weight:600; font-size:30px; }
+  .sub { color:var(--muted); margin:6px 0 24px; }
+  .habit { background:var(--card); border-radius:22px; padding:18px 20px; margin-bottom:12px; box-shadow: 0 1px 0 #d9e5d9; }
+  .head { display:flex; justify-content:space-between; align-items:center; }
+  .name { font-weight:600; font-size:17px; }
+  .streak { color:var(--muted); font-size:14px; }
+  .week { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:14px; }
+  .dot { aspect-ratio:1; border-radius:50%; border:2px solid var(--sand); background:transparent; cursor:pointer; font-size:11px; color:var(--muted); }
+  .dot.done { background:var(--sea); border-color:var(--sea); color:#fff; }
+  .add { display:flex; gap:8px; margin-top:20px; }
+  input { flex:1; border:2px solid var(--sand); border-radius:14px; padding:12px 14px; font:inherit; background:var(--card); color:var(--ink); }
+  button.primary { background:var(--ink); color:#fff; border:0; border-radius:14px; padding:0 18px; font:inherit; font-weight:600; cursor:pointer; }
+  .note { color:var(--muted); font-size:13px; margin-top:16px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Tidepool</h1>
+  <p class="sub">Small habits, no guilt. Tap a day to mark it.</p>
+  <div id="list"></div>
+  <div class="add">
+    <label for="new" style="position:absolute;left:-9999px">New habit</label>
+    <input id="new" placeholder="Add a habit, like 'stretch'" maxlength="40">
+    <button type="button" class="primary" id="add">Add</button>
+  </div>
+  <p class="note" id="note"></p>
+</main>
+<script>
+  var days = ["M", "T", "W", "T", "F", "S", "S"];
+  var store = (function () {
+    try { localStorage.setItem("t", "1"); localStorage.removeItem("t"); return localStorage; } catch (e) { return null; }
+  })();
+  var state = [{ name: "Drink water", done: [1, 1, 0, 1, 0, 0, 0] }, { name: "Walk outside", done: [1, 0, 1, 1, 0, 0, 0] }, { name: "Read 10 pages", done: [0, 1, 1, 0, 0, 0, 0] }];
+  if (store && store.getItem("tidepool")) { try { state = JSON.parse(store.getItem("tidepool")); } catch (e) {} }
+  document.getElementById("note").textContent = store ? "Saved in this browser." : "Your progress resets when you leave this preview.";
+  function save() { if (store) store.setItem("tidepool", JSON.stringify(state)); }
+  function streak(d) { var s = 0; for (var i = 0; i < d.length; i++) { s = d[i] ? s + 1 : 0; } return s; }
+  function render() {
+    document.getElementById("list").innerHTML = state.map(function (h, hi) {
+      return '<div class="habit"><div class="head"><span class="name">' + h.name.replace(/</g, "&lt;") + '</span><span class="streak">' + h.done.filter(Boolean).length + '/7 this week</span></div><div class="week">' +
+        h.done.map(function (v, di) { return '<button type="button" class="dot' + (v ? " done" : "") + '" data-h="' + hi + '" data-d="' + di + '" aria-pressed="' + !!v + '" aria-label="' + h.name.replace(/"/g, "") + " " + days[di] + '">' + days[di] + "</button>"; }).join("") + "</div></div>";
+    }).join("");
+  }
+  document.getElementById("list").addEventListener("click", function (e) {
+    var t = e.target.closest(".dot"); if (!t) return;
+    var h = state[+t.dataset.h]; h.done[+t.dataset.d] = h.done[+t.dataset.d] ? 0 : 1; save(); render();
+  });
+  document.getElementById("add").addEventListener("click", function () {
+    var i = document.getElementById("new"), v = i.value.trim(); if (!v) return;
+    state.push({ name: v, done: [0, 0, 0, 0, 0, 0, 0] }); i.value = ""; save(); render();
+  });
+  render();
+</script>
+</body>
+</html>

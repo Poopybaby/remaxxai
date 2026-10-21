@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON SNAKE</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { background:#05010f; color:#e9e6ff; font-family: "Lucida Console", Monaco, monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px; }
+  h1 { font-size:34px; letter-spacing:6px; color:#39ff14; text-shadow: 0 0 10px #39ff14, 0 0 30px #39ff14; }
+  .hud { display:flex; gap:28px; font-size:15px; }
+  .hud b { color:#ff2bd6; text-shadow: 0 0 8px #ff2bd6; }
+  canvas { width:min(420px, 90vw); aspect-ratio:1; border:2px solid #39ff14; box-shadow: 0 0 30px #39ff1455, inset 0 0 30px #39ff1422; background:#07021a; image-rendering: pixelated; touch-action:none; }
+  .pad { display:grid; grid-template-columns: repeat(3, 56px); gap:6px; }
+  .pad button { height:56px; background:#120a2e; color:#39ff14; border:2px solid #39ff14; border-radius:10px; font-size:22px; cursor:pointer; }
+  .pad .blank { visibility:hidden; }
+  #msg { min-height:1.4em; color:#ff2bd6; }
+</style>
+</head>
+<body>
+<h1>NEON SNAKE</h1>
+<div class="hud"><span>SCORE <b id="score">0</b></span><span>BEST <b id="best">0</b></span></div>
+<canvas id="c" width="400" height="400" aria-label="Snake game board"></canvas>
+<p id="msg" role="status">PRESS AN ARROW KEY OR TAP TO START</p>
+<div class="pad" aria-label="Controls">
+  <span class="blank"></span><button type="button" data-d="0,-1" aria-label="Up">▲</button><span class="blank"></span>
+  <button type="button" data-d="-1,0" aria-label="Left">◀</button><button type="button" data-d="0,1" aria-label="Down">▼</button><button type="button" data-d="1,0" aria-label="Right">▶</button>
+</div>
+<script>
+  var c = document.getElementById("c"), x = c.getContext("2d"), N = 20, S = 20;
+  var snake, dir, next, food, score, best = 0, timer = null;
+  function reset() { snake = [[10, 10], [9, 10], [8, 10]]; dir = [1, 0]; next = dir; score = 0; place(); draw(); }
+  function place() { do { food = [Math.floor(Math.random() * N), Math.floor(Math.random() * N)]; } while (snake.some(function (p) { return p[0] === food[0] && p[1] === food[1]; })); }
+  function start() { if (timer) return; document.getElementById("msg").textContent = ""; timer = setInterval(step, 110); }
+  function over() { clearInterval(timer); timer = null; best = Math.max(best, score); document.getElementById("best").textContent = best; document.getElementById("msg").textContent = "GAME OVER. PRESS ANY ARROW TO RETRY."; reset(); }
+  function step() {
+    dir = next; var h = [snake[0][0] + dir[0], snake[0][1] + dir[1]];
+    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snake.some(function (p) { return p[0] === h[0] && p[1] === h[1]; })) return over();
+    snake.unshift(h);
+    if (h[0] === food[0] && h[1] === food[1]) { score++; place(); } else snake.pop();
+    draw();
+  }
+  function draw() {
+    document.getElementById("score").textContent = score;
+    x.fillStyle = "#07021a"; x.fillRect(0, 0, 400, 400);
+    x.shadowBlur = 14; x.shadowColor = "#ff2bd6"; x.fillStyle = "#ff2bd6"; x.fillRect(food[0] * S + 4, food[1] * S + 4, S - 8, S - 8);
+    x.shadowColor = "#39ff14"; snake.forEach(function (p, i) { x.fillStyle = i ? "#2bd10f" : "#39ff14"; x.fillRect(p[0] * S + 1, p[1] * S + 1, S - 2, S - 2); });
+    x.shadowBlur = 0;
+  }
+  function turn(d) { if (d[0] === -dir[0] && d[1] === -dir[1]) return; next = d; start(); }
+  var keys = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+  document.addEventListener("keydown", function (e) { if (keys[e.key]) { e.preventDefault(); turn(keys[e.key]); } });
+  document.querySelectorAll(".pad button").forEach(function (b) { b.onclick = function () { turn(b.dataset.d.split(",").map(Number)); }; });
+  reset();
+</script>
+</body>
+</html>

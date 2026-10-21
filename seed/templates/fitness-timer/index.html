@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INTERVAL: workout timer</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:20px; font-family: "Futura", "Century Gothic", "Trebuchet MS", sans-serif; color:#fff; transition: background .4s; background:#1f1f1f; }
+  body.work { background:#e63946; } body.rest { background:#2a9d8f; } body.done { background:#264653; }
+  .phase { font-size:22px; letter-spacing:.4em; font-weight:700; }
+  .ring { position:relative; width:min(320px, 80vw); aspect-ratio:1; }
+  .ring svg { width:100%; height:100%; transform: rotate(-90deg); }
+  .ring circle { fill:none; stroke-width:10; }
+  .ring .bg { stroke: rgba(255,255,255,.2); } .ring .fg { stroke:#fff; stroke-linecap:round; transition: stroke-dashoffset .2s linear; }
+  .num { position:absolute; inset:0; display:grid; place-items:center; font-size: clamp(64px, 18vw, 120px); font-weight:700; font-variant-numeric: tabular-nums; }
+  .round { font-size:18px; opacity:.9; }
+  .controls { display:flex; gap:12px; }
+  .controls button { border:3px solid #fff; background:transparent; color:#fff; padding:14px 26px; border-radius:999px; font: 700 16px inherit; font-family:inherit; letter-spacing:.12em; cursor:pointer; }
+  .controls button.primary { background:#fff; color:#1f1f1f; }
+  .setup { display:flex; gap:16px; font-size:14px; flex-wrap:wrap; justify-content:center; }
+  .setup label { display:flex; flex-direction:column; align-items:center; gap:6px; letter-spacing:.1em; }
+  .setup input { width:80px; text-align:center; background:rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.5); color:#fff; border-radius:12px; padding:8px; font: 700 20px inherit; font-family:inherit; }
+</style>
+</head>
+<body>
+<p class="phase" id="phase">READY</p>
+<div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="fg" cx="60" cy="60" r="52"/></svg><div class="num" id="num" role="timer">0</div></div>
+<p class="round" id="round">Round 0 of 8</p>
+<div class="setup">
+  <label>WORK<input id="work" type="number" min="5" max="300" value="40"></label>
+  <label>REST<input id="rest" type="number" min="0" max="300" value="20"></label>
+  <label>ROUNDS<input id="rounds" type="number" min="1" max="30" value="8"></label>
+</div>
+<div class="controls"><button type="button" class="primary" id="start">START</button><button type="button" id="reset">RESET</button></div>
+<script>
+  var C = 2 * Math.PI * 52, fg = document.getElementById("fg"); fg.style.strokeDasharray = C;
+  var phase = "ready", left = 0, total = 1, round = 0, timer = null;
+  function val(id) { return Math.max(+document.getElementById(id).min, Math.min(+document.getElementById(id).max, +document.getElementById(id).value || 0)); }
+  function show() {
+    document.body.className = phase; document.getElementById("phase").textContent = phase.toUpperCase();
+    document.getElementById("num").textContent = phase === "done" ? "✓" : left;
+    document.getElementById("round").textContent = "Round " + round + " of " + val("rounds");
+    fg.style.strokeDashoffset = C * (1 - left / total);
+  }
+  function enter(p) { phase = p; total = left = p === "work" ? val("work") : val("rest"); if (p === "work") round++; show(); }
+  function tick() {
+    left--; if (left > 0) return show();
+    if (phase === "work" && round >= val("rounds")) { phase = "done"; left = 0; stop(); return show(); }
+    enter(phase === "work" && val("rest") > 0 ? "rest" : "work");
+  }
+  function stop() { clearInterval(timer); timer = null; document.getElementById("start").textContent = phase === "done" ? "AGAIN" : "START"; }
+  document.getElementById("start").onclick = function () {
+    if (timer) { stop(); this.textContent = "RESUME"; return; }
+    if (phase === "ready" || phase === "done") { round = 0; enter("work"); }
+    timer = setInterval(tick, 1000); this.textContent = "PAUSE";
+  };
+  document.getElementById("reset").onclick = function () { stop(); phase = "ready"; left = 0; total = 1; round = 0; show(); };
+  show();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIGHTDRIVE 26: launch countdown</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; background: linear-gradient(#0a0018 0%, #2b0a4f 55%, #ff2e88 100%); color:#fff; font-family: "Trebuchet MS", Verdana, sans-serif; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .sun { width:min(340px,60vw); aspect-ratio:1; border-radius:50%; background: repeating-linear-gradient(#ffd319 0 14px, #ff8c00 14px 16px, transparent 16px 22px), linear-gradient(#ffd319, #ff2975); background-blend-mode: normal; -webkit-mask: linear-gradient(#000 55%, transparent 55%, transparent 60%, #000 60%, #000 68%, transparent 68%, transparent 73%, #000 73%); mask: linear-gradient(#000 55%, transparent 55%, transparent 60%, #000 60%, #000 68%, transparent 68%, transparent 73%, #000 73%); filter: drop-shadow(0 0 40px #ff2975); }
+  .grid { position:fixed; bottom:0; left:-50%; width:200%; height:42vh; background-image: linear-gradient(#ff2e88 2px, transparent 2px), linear-gradient(90deg, #ff2e88 2px, transparent 2px); background-size: 60px 60px; transform: perspective(300px) rotateX(60deg); transform-origin: bottom; opacity:.6; animation: drive 1.2s linear infinite; z-index:0; }
+  @keyframes drive { to { background-position: 0 60px; } }
+  main { position:relative; z-index:1; padding:20px; }
+  h1 { font-size: clamp(40px, 9vw, 110px); font-style:italic; letter-spacing:4px; margin-top:-40px; background: linear-gradient(#fff, #6df1ff 60%, #b026ff); -webkit-background-clip:text; background-clip:text; color:transparent; filter: drop-shadow(0 0 18px #b026ff); }
+  .clock { display:flex; gap:14px; justify-content:center; margin:24px 0; }
+  .unit { background: rgba(10,0,24,.6); border:2px solid #6df1ff; border-radius:12px; padding:14px 10px; min-width:84px; box-shadow: 0 0 20px #6df1ff66, inset 0 0 20px #6df1ff33; }
+  .unit b { display:block; font-size:42px; color:#6df1ff; text-shadow: 0 0 12px #6df1ff; font-variant-numeric: tabular-nums; }
+  .unit span { font-size:12px; letter-spacing:3px; }
+  button { background:#ff2e88; color:#fff; border:0; padding:14px 30px; border-radius:999px; font: bold 16px "Trebuchet MS", sans-serif; letter-spacing:2px; cursor:pointer; box-shadow: 0 0 24px #ff2e88; }
+  #status { margin-top:14px; min-height:1.4em; color:#ffd319; }
+  @media (prefers-reduced-motion: reduce) { .grid { animation:none; } }
+</style>
+</head>
+<body>
+<div class="grid" aria-hidden="true"></div>
+<main>
+  <div class="sun" aria-hidden="true"></div>
+  <h1>NIGHTDRIVE 26</h1>
+  <p>An all-night synth festival on the roof of a parking garage.</p>
+  <div class="clock" role="timer" aria-live="off">
+    <div class="unit"><b id="d">00</b><span>DAYS</span></div>
+    <div class="unit"><b id="h">00</b><span>HRS</span></div>
+    <div class="unit"><b id="m">00</b><span>MIN</span></div>
+    <div class="unit"><b id="s">00</b><span>SEC</span></div>
+  </div>
+  <button type="button" id="rsvp">RSVP</button>
+  <p id="status" role="status"></p>
+</main>
+<script>
+  var target = Date.now() + 1000 * 60 * 60 * 24 * 12.4;
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function tick() {
+    var t = Math.max(0, target - Date.now()) / 1000;
+    document.getElementById("d").textContent = pad(Math.floor(t / 86400));
+    document.getElementById("h").textContent = pad(Math.floor(t % 86400 / 3600));
+    document.getElementById("m").textContent = pad(Math.floor(t % 3600 / 60));
+    document.getElementById("s").textContent = pad(Math.floor(t % 60));
+  }
+  tick(); setInterval(tick, 1000);
+  document.getElementById("rsvp").onclick = function () { document.getElementById("status").textContent = "YOU'RE ON THE LIST. SEE YOU ON LEVEL 6."; };
+</script>
+</body>
+</html>

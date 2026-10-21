@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lanes: a tiny kanban board</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Lanes</h1>
+  <div class="add">
+    <label for="title" class="sr">New card</label>
+    <input id="title" placeholder="What needs doing?" maxlength="80">
+    <button type="button" id="add">Add card</button>
+  </div>
+</header>
+<main class="board" id="board">
+  <section class="lane" data-lane="todo"><h2>To do <span class="count"></span></h2><div class="cards"></div></section>
+  <section class="lane" data-lane="doing"><h2>Doing <span class="count"></span></h2><div class="cards"></div></section>
+  <section class="lane" data-lane="done"><h2>Done <span class="count"></span></h2><div class="cards"></div></section>
+</main>
+<p class="hint">Drag cards between lanes, or use the arrow buttons.</p>
+<script src="app.js"></script>
+</body>
+</html>

@@ -14,7 +14,13 @@ export function classifyHost(host: string | null, previewOrigin: string): HostKi
 export const PREVIEW_ROUTE_PREFIX = "/usercontent";
 
 /** Paths that need a signed-in user. The page itself re-checks; this is the fast redirect. */
-export const SIGNED_IN_PATHS = ["/onboarding", "/settings", "/admin"] as const;
+export const SIGNED_IN_PATHS = [
+  "/onboarding",
+  "/settings",
+  "/admin",
+  "/upload",
+  "/collections",
+] as const;
 
 export function requiresSignIn(pathname: string): boolean {
   return SIGNED_IN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

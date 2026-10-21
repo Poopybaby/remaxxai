@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Low Signal: a podcast about quiet tech</title>
+<style>
+  :root { --bg:#111014; --card:#1b1a20; --line:#2c2a33; --text:#f1eff7; --muted:#9b97a8; --amber:#ffb238; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font-family: "Avenir Next", "Segoe UI", sans-serif; }
+  .hero { display:grid; grid-template-columns: 340px 1fr; gap:48px; align-items:center; padding:80px 7vw 60px; }
+  .cover { aspect-ratio:1; border-radius:18px; background: conic-gradient(from 200deg, #ffb238, #ff5d73, #6c5ce7, #ffb238); position:relative; overflow:hidden; }
+  .cover::after { content:"LOW\A SIGNAL"; white-space:pre; position:absolute; left:22px; bottom:18px; font: 900 52px/0.9 "Avenir Next", "Arial Black", sans-serif; color:#111014; }
+  .ep { color:var(--amber); font-size:14px; font-weight:600; letter-spacing:.06em; }
+  h1 { font-size: clamp(34px, 5vw, 60px); line-height:1.05; margin:10px 0 14px; }
+  .lede { color:var(--muted); font-size:18px; line-height:1.6; max-width:52ch; }
+  .player { margin-top:26px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; align-items:center; gap:16px; }
+  .play { width:56px; height:56px; border-radius:50%; background:var(--amber); border:0; cursor:pointer; flex-shrink:0; display:grid; place-items:center; }
+  .play svg { width:22px; height:22px; fill:#111014; }
+  .wave { flex:1; display:flex; align-items:center; gap:3px; height:48px; }
+  .wave span { flex:1; background:var(--line); border-radius:2px; min-height:4px; }
+  .wave span.on { background:var(--amber); }
+  .time { color:var(--muted); font-variant-numeric: tabular-nums; font-size:14px; }
+  .list { padding:20px 7vw 80px; display:grid; gap:12px; }
+  .list h2 { font-size:22px; margin-bottom:6px; }
+  .row { display:grid; grid-template-columns: 60px 1fr auto; gap:16px; align-items:center; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+  .row b { color:var(--amber); font-size:20px; } .row p { color:var(--muted); font-size:14px; margin-top:2px; }
+  @media (max-width: 820px) { .hero { grid-template-columns:1fr; } .cover { max-width:300px; } }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="cover" role="img" aria-label="Low Signal podcast cover"></div>
+  <div>
+    <span class="ep">EPISODE 42 · 38 MIN</span>
+    <h1>The case for boring software</h1>
+    <p class="lede">Why the tools we trust most are the ones we never think about. With a farmer who still runs his irrigation on a 2009 spreadsheet.</p>
+    <div class="player">
+      <button class="play" type="button" id="play" aria-label="Play episode"><svg viewBox="0 0 24 24" id="icon"><path d="M7 4v16l13-8z"/></svg></button>
+      <div class="wave" id="wave" aria-hidden="true"></div>
+      <span class="time" id="time">0:00 / 38:12</span>
+    </div>
+  </div>
+</section>
+<section class="list">
+  <h2>Recent episodes</h2>
+  <div class="row"><b>41</b><div><strong>Offline first, online second</strong><p>Apps that work in a tunnel.</p></div><span class="time">44 min</span></div>
+  <div class="row"><b>40</b><div><strong>The notification diet</strong><p>We turned off everything for a month.</p></div><span class="time">31 min</span></div>
+  <div class="row"><b>39</b><div><strong>Repair, don't replace</strong><p>A visit to a laptop repair café.</p></div><span class="time">52 min</span></div>
+</section>
+<script>
+  var wave = document.getElementById("wave"), bars = 60, pos = 0, timer = null;
+  for (var i = 0; i < bars; i++) { var s = document.createElement("span"); s.style.height = (8 + Math.abs(Math.sin(i * 0.7) * 30) + (i * 37 % 11)) + "px"; wave.appendChild(s); }
+  function paint() { [].forEach.call(wave.children, function (s, i) { s.className = i < pos ? "on" : ""; });
+    var secs = Math.round(pos / bars * 2292); document.getElementById("time").textContent = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0") + " / 38:12"; }
+  document.getElementById("play").onclick = function () {
+    var icon = document.getElementById("icon"), btn = this;
+    if (timer) { clearInterval(timer); timer = null; icon.innerHTML = '<path d="M7 4v16l13-8z"/>'; btn.setAttribute("aria-label", "Play episode"); return; }
+    icon.innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>'; btn.setAttribute("aria-label", "Pause episode");
+    timer = setInterval(function () { pos = (pos + 1) % (bars + 1); paint(); }, 400);
+  };
+  paint();
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quill docs</title>
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<header class="top">
+  <span class="logo">quill<span>/docs</span></span>
+  <label for="q" class="sr">Search the docs</label>
+  <input id="q" type="search" placeholder="Search docs  ( / )">
+</header>
+<div class="layout">
+  <nav class="side" aria-label="Docs">
+    <p class="group">Getting started</p>
+    <a href="#install" class="on">Install</a>
+    <a href="#config">Configuration</a>
+    <a href="#first">Your first note</a>
+    <p class="group">Guides</p>
+    <a href="#sync">Sync</a>
+    <a href="#export">Export</a>
+    <a href="#shortcuts">Keyboard shortcuts</a>
+    <p id="nomatch" class="empty" hidden>No pages match.</p>
+  </nav>
+  <main class="content">
+    <p class="crumbs">Getting started / Install</p>
+    <h1 id="install">Install Quill</h1>
+    <p>Quill is a plain-text notes app that keeps everything in a folder you choose. Install it with your package manager of choice.</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-cmd="npm install -g quill-notes">npm</button>
+      <button type="button" role="tab" aria-selected="false" data-cmd="brew install quill">Homebrew</button>
+      <button type="button" role="tab" aria-selected="false" data-cmd="winget install quill">winget</button>
+    </div>
+    <pre class="code"><code id="cmd">npm install -g quill-notes</code><button type="button" id="copy">Copy</button></pre>
+    <div class="callout"><b>Note</b> Quill needs read and write access to the folder you pick. It never uploads anything unless you turn on sync.</div>
+    <h2 id="config">Configuration</h2>
+    <p>Create a <code>quill.toml</code> in your notes folder:</p>
+    <pre class="code"><code>folder = "~/notes"
+theme = "paper"
+autosave_seconds = 5</code></pre>
+    <h2 id="first">Your first note</h2>
+    <p>Run <code>quill new "Groceries"</code>. The file opens in your editor and appears in the sidebar.</p>
+    <div class="pager"><span></span><a href="#config">Next: Configuration →</a></div>
+  </main>
+</div>
+<script>
+  document.querySelectorAll('[role="tab"]').forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll('[role="tab"]').forEach(function (x) { x.setAttribute("aria-selected", x === t); });
+      document.getElementById("cmd").textContent = t.dataset.cmd;
+    });
+  });
+  document.getElementById("copy").addEventListener("click", function () {
+    var b = this, text = document.getElementById("cmd").textContent;
+    var done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { b.textContent = "Select and copy"; });
+    else b.textContent = "Select and copy";
+  });
+  var q = document.getElementById("q");
+  q.addEventListener("input", function () {
+    var v = q.value.toLowerCase(), any = false;
+    document.querySelectorAll(".side a").forEach(function (a) { var hit = a.textContent.toLowerCase().indexOf(v) > -1; a.hidden = !hit; any = any || hit; });
+    document.getElementById("nomatch").hidden = any;
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); } });
+</script>
+</body>
+</html>
