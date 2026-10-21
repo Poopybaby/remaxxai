@@ -164,14 +164,14 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 1 — Foundation**
 
-- [ ] Scaffold, strict TS, ESLint, Prettier, Tailwind design tokens (dark theme, REMAXX wordmark, type scale, card styles)
-- [ ] Supabase project wiring, Drizzle schema for profiles/waitlist, first migrations
-- [ ] Auth: email + Google + GitHub, profile creation with handle on first login
-- [ ] Base layout (mobile-first nav), one-screen landing page with waitlist + sign-up CTA
-- [ ] Storage buckets + upload helper; preview-domain routing skeleton
-- [ ] Legal page stubs (DRAFT banners)
-- [ ] GitHub Actions CI; `.env.example`; README v1
-- [ ] Tests: permission helpers, handle validation
+- [x] Scaffold, strict TS, ESLint, Prettier, Tailwind design tokens (dark theme, REMAXX wordmark, type scale, card styles)
+- [x] Supabase project wiring, Drizzle schema for profiles/waitlist, first migrations
+- [x] Auth: email + Google + GitHub, profile creation with handle on first login
+- [x] Base layout (mobile-first nav), one-screen landing page with waitlist + sign-up CTA
+- [x] Storage buckets + upload helper; preview-domain routing skeleton
+- [x] Legal page stubs (DRAFT banners)
+- [x] GitHub Actions CI; `.env.example`; README v1
+- [x] Tests: permission helpers, handle validation
 
 **Phase 2 — Gallery**
 
@@ -237,7 +237,7 @@ Until keys arrive I can build and test everything against PGlite and mocked prov
 
 ## 8. Questions (expensive to undo)
 
-**All decided Oct 21, 2026.** Plan approved; building Phase 1.
+**All decided Oct 21, 2026.** Plan approved. Phase 1 complete.
 
 **Q1. Auth provider — DECIDED:** Supabase Auth.
 
