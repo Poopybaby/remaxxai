@@ -411,15 +411,13 @@ describe("file storage", () => {
   it("never stores a path that escapes the project", async () => {
     const p = await make(alice, {}, meta({ title: "Paths" }));
     await expect(
-      t.db
-        .insert(projectFiles)
-        .values({
-          versionId: p.currentVersionId!,
-          path: "../escape.html",
-          blobSha256: "a".repeat(64),
-          size: 1,
-          mime: "text/html",
-        }),
+      t.db.insert(projectFiles).values({
+        versionId: p.currentVersionId!,
+        path: "../escape.html",
+        blobSha256: "a".repeat(64),
+        size: 1,
+        mime: "text/html",
+      }),
     ).rejects.toThrow();
   });
 });

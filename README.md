@@ -29,15 +29,15 @@ The app starts without any keys: the landing page and legal pages work, sign-in 
 
 Everything is listed with instructions in [.env.example](./.env.example). Only `NEXT_PUBLIC_*` values reach the browser. AI and payment keys are server-only and CI fails the build if one shows up in the client bundle.
 
-| Variable                                             | Needed for             | Where to get it                                          |
-| ---------------------------------------------------- | ---------------------- | -------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`                                | Links, metadata        | Your domain, e.g. `https://remaxx.ai`                    |
-| `NEXT_PUBLIC_PREVIEW_ORIGIN`                         | Sandboxed previews     | Your second domain, e.g. `https://remaxxusercontent.com` |
-| `NEXT_PUBLIC_SUPABASE_URL`                           | Auth, storage          | Supabase → Project Settings → API Keys                   |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`               | Auth in the browser    | Same page (publishable / anon key)                       |
-| `SUPABASE_SECRET_KEY`                                | Storage admin (server) | Same page (secret / service_role key)                    |
-| `DATABASE_URL`                                       | Everything with data   | Supabase → Connect → connection string                   |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits     | Upstash console (optional until launch)                  |
+| Variable                                             | Needed for             | Where to get it                                                             |
+| ---------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`                                | Links, metadata        | Your domain, e.g. `https://remaxx.ai`                                       |
+| `NEXT_PUBLIC_PREVIEW_ORIGIN`                         | Sandboxed previews     | Your second domain, e.g. `https://remaxxusercontent.com`                    |
+| `NEXT_PUBLIC_SUPABASE_URL`                           | Auth, storage          | Supabase → Project Settings → API Keys                                      |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`               | Auth in the browser    | Same page (publishable / anon key)                                          |
+| `SUPABASE_SECRET_KEY`                                | Storage admin (server) | Same page (secret / service_role key)                                       |
+| `DATABASE_URL`                                       | Everything with data   | Supabase → Connect → connection string                                      |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits     | Upstash console (optional until launch)                                     |
 | `OPENAI_API_KEY`                                     | Upload moderation      | platform.openai.com (optional now; uploads are marked unchecked without it) |
 
 ## Supabase setup (one time)
@@ -64,10 +64,10 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 | `pnpm db:migrate`                        | Applies new files in `db/migrations` to `DATABASE_URL`                                                                 |
 | `pnpm db:make-admin <handle> [--revoke]` | Grants or removes the admin role                                                                                       |
 | `pnpm storage:setup`                     | Creates or updates the storage buckets in `config/limits.ts`                                                           |
-| `pnpm seed` / `pnpm seed:sql`             | Loads the starter templates into `DATABASE_URL`, or prints the SQL to paste. Safe to run again                           |
-| `pnpm db:setup-sql`                      | Prints all migrations plus storage buckets as one SQL script for the Supabase SQL Editor                                |
+| `pnpm seed` / `pnpm seed:sql`            | Loads the starter templates into `DATABASE_URL`, or prints the SQL to paste. Safe to run again                         |
+| `pnpm db:setup-sql`                      | Prints all migrations plus storage buckets as one SQL script for the Supabase SQL Editor                               |
 | `pnpm check:bundle`                      | After a build, fails if a secret-looking value is in the browser bundle                                                |
-| `pnpm verify`                              | Everything CI runs, in order                                                                                           |
+| `pnpm verify`                            | Everything CI runs, in order                                                                                           |
 
 ## Project layout
 

@@ -219,6 +219,7 @@ Credits formula (all knobs in `config/plans.ts`):
 - [ ] Final legal pages (still DRAFT), deployment guide, Playwright smoke suite in CI
 
 **Phase 2 build notes (decided while building, cheap to change later):**
+
 - Uploads are static sites only (HTML/CSS/JS/images/fonts/media). React/Vue/TS source is asked for its build output; Sandpack-powered React projects arrive with the editor in Phase 4.
 - Upload size is 4 MB because uploads pass through a Vercel function (4.5 MB body limit). Direct-to-storage uploads can lift this.
 - Project files and covers are stored in Postgres (content-addressed `blobs`), not Supabase Storage, so setup needs no buckets yet. `blobs.storage_key` is the migration path.

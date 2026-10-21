@@ -50,16 +50,14 @@ export async function recordLineage(db: DbLike, childId: string, parentId: strin
     throw new Error("Remix cycle detected");
   }
 
-  await db
-    .insert(remixLineage)
-    .values([
-      { ancestorId: parentId, descendantId: childId, depth: 1 },
-      ...parentAncestors.map((a) => ({
-        ancestorId: a.ancestorId,
-        descendantId: childId,
-        depth: a.depth + 1,
-      })),
-    ]);
+  await db.insert(remixLineage).values([
+    { ancestorId: parentId, descendantId: childId, depth: 1 },
+    ...parentAncestors.map((a) => ({
+      ancestorId: a.ancestorId,
+      descendantId: childId,
+      depth: a.depth + 1,
+    })),
+  ]);
 
   const parentCredits = await db
     .select()
