@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # pnpm isn't installed yet at this step, so skip setup-node's automatic package cache.
+          package-manager-cache: false
 
       # pnpm comes from corepack, pinned by "packageManager" in package.json.
       - name: Enable pnpm
