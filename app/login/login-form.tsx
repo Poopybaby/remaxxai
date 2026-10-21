@@ -10,10 +10,20 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 type Provider = "google" | "github";
 
 const CALLBACK_ERRORS: Record<string, string> = {
-  callback:
-    "That sign-in link didn't work. It may have expired or already been used. Request a new one.",
+  expired:
+    "That sign-in link has expired or was already used. Each link works once. Send yourself a new one below.",
+  browser:
+    "That link was opened in a different browser from the one you requested it in. Send a new link and open it here, or type the code from the email.",
+  callback: "That sign-in link didn't work. Send yourself a new one below.",
+  denied: "Sign-in was cancelled. Try again.",
   oauth: "Sign-in with that provider was cancelled or failed. Try again.",
 };
+
+/** Social sign-in buttons appear only for providers switched on in Supabase (see README). */
+const PROVIDERS = (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? "")
+  .split(",")
+  .map((p) => p.trim().toLowerCase())
+  .filter((p): p is Provider => p === "google" || p === "github");
 
 export function LoginForm() {
   const params = useSearchParams();
@@ -23,6 +33,9 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(initialError);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const supabase = getSupabaseBrowserClient();
 
   function callbackUrl() {
@@ -52,6 +65,32 @@ export function LoginForm() {
       return;
     }
     setStatus("sent");
+  }
+
+  async function verifyCode(e: FormEvent) {
+    e.preventDefault();
+    if (!supabase) return;
+    const token = code.replace(/\s/g, "");
+    if (!/^\d{6,10}$/.test(token)) {
+      setCodeError("Enter the number code from the email.");
+      return;
+    }
+    setVerifying(true);
+    setCodeError(null);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token,
+      type: "email",
+    });
+    if (verifyError) {
+      setVerifying(false);
+      setCodeError("That code didn't work. It may have expired. Check it, or send a new email.");
+      return;
+    }
+    // A full navigation on purpose: /auth/continue is a route handler that reads the new session
+    // cookie on the server and redirects, which client-side routing can't follow.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/auth/continue?next=${encodeURIComponent(next)}`);
   }
 
   async function signInWith(provider: Provider) {
@@ -84,12 +123,33 @@ export function LoginForm() {
       >
         <p className="text-fg font-semibold">Check your email</p>
         <p className="text-muted">
-          We sent a sign-in link to <span className="text-fg">{email.trim()}</span>. Open it on this
-          device to continue.
+          We sent an email to <span className="text-fg">{email.trim()}</span>. Click the link in it
+          once, or type the code from it here.
         </p>
+        <form onSubmit={verifyCode} className="mt-2 flex flex-col gap-3" noValidate>
+          <Field id="login-code" label="Code from the email" error={codeError ?? undefined}>
+            <Input
+              id="login-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="123456"
+              aria-invalid={codeError ? true : undefined}
+              aria-describedby={codeError ? "login-code-error" : undefined}
+            />
+          </Field>
+          <Button type="submit" disabled={verifying} className="w-fit">
+            {verifying ? "Checking…" : "Sign in with code"}
+          </Button>
+        </form>
         <button
           type="button"
-          onClick={() => setStatus("idle")}
+          onClick={() => {
+            setStatus("idle");
+            setCode("");
+            setCodeError(null);
+          }}
           className="text-muted hover:text-fg mt-1 w-fit text-sm underline underline-offset-4"
         >
           Use a different email
@@ -100,18 +160,25 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2.5">
-        <Button variant="secondary" size="lg" onClick={() => signInWith("google")}>
-          <GoogleMark /> Continue with Google
-        </Button>
-        <Button variant="secondary" size="lg" onClick={() => signInWith("github")}>
-          <GitHubMark /> Continue with GitHub
-        </Button>
-      </div>
-
-      <div className="text-faint flex items-center gap-3 text-sm" aria-hidden>
-        <span className="bg-line h-px flex-1" /> or <span className="bg-line h-px flex-1" />
-      </div>
+      {PROVIDERS.length > 0 ? (
+        <>
+          <div className="flex flex-col gap-2.5">
+            {PROVIDERS.includes("google") ? (
+              <Button variant="secondary" size="lg" onClick={() => signInWith("google")}>
+                <GoogleMark /> Continue with Google
+              </Button>
+            ) : null}
+            {PROVIDERS.includes("github") ? (
+              <Button variant="secondary" size="lg" onClick={() => signInWith("github")}>
+                <GitHubMark /> Continue with GitHub
+              </Button>
+            ) : null}
+          </div>
+          <div className="text-faint flex items-center gap-3 text-sm" aria-hidden>
+            <span className="bg-line h-px flex-1" /> or <span className="bg-line h-px flex-1" />
+          </div>
+        </>
+      ) : null}
 
       <form onSubmit={sendLink} className="flex flex-col gap-3" noValidate>
         <Field id="login-email" label="Email" error={error ?? undefined}>
@@ -127,7 +194,7 @@ export function LoginForm() {
           />
         </Field>
         <Button type="submit" size="lg" disabled={status === "sending"}>
-          {status === "sending" ? "Sending link…" : "Email me a sign-in link"}
+          {status === "sending" ? "Sending…" : "Email me a sign-in link"}
         </Button>
       </form>
     </div>

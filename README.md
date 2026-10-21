@@ -44,6 +44,8 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 
 1. Create a project at [supabase.com](https://supabase.com) and copy the keys above into `.env.local`.
 2. **Auth → URL Configuration:** set Site URL to your app URL and add `http://localhost:3000/auth/callback` and `https://<your-domain>/auth/callback` to Redirect URLs.
+   **Auth → Emails → Templates:** paste the two templates in [docs/email-templates.md](docs/email-templates.md) so sign-in links work in any browser and include a typeable code.
+   Google/GitHub sign-in: switch the provider on in Auth → Sign In / Providers, then set `NEXT_PUBLIC_AUTH_PROVIDERS=google,github`. The buttons stay hidden until you do.
 3. **Auth → Sign In / Providers:** enable Email (magic link), Google and GitHub.
    - Google: create an OAuth client in Google Cloud Console; authorized redirect URI is the callback URL Supabase shows you.
    - GitHub: GitHub → Settings → Developer settings → OAuth Apps → New, with the same Supabase callback URL.
