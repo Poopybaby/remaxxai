@@ -83,7 +83,7 @@ create index projects_license_idx on projects (license_id);
 
 create trigger projects_set_updated_at
   before update on projects
-  for each row execute function set_updated_at();
+  for each row execute function remaxx_set_updated_at();
 
 create table project_versions (
   id uuid primary key default gen_random_uuid(),
@@ -202,7 +202,7 @@ create table follows (
 create index follows_followee_idx on follows (followee_id);
 
 -- Counters kept by triggers so they can't drift from the rows they count.
-create function bump_project_counter() returns trigger language plpgsql as $$
+create function remaxx_bump_project_counter() returns trigger language plpgsql as $$
 declare
   delta int := case when tg_op = 'INSERT' then 1 else -1 end;
   pid uuid := case when tg_op = 'INSERT' then new.project_id else old.project_id end;
@@ -217,11 +217,11 @@ end;
 $$;
 
 create trigger likes_count after insert or delete on likes
-  for each row execute function bump_project_counter();
+  for each row execute function remaxx_bump_project_counter();
 create trigger collection_items_count after insert or delete on collection_items
-  for each row execute function bump_project_counter();
+  for each row execute function remaxx_bump_project_counter();
 
-create function bump_remix_counter() returns trigger language plpgsql as $$
+create function remaxx_bump_remix_counter() returns trigger language plpgsql as $$
 begin
   if tg_op = 'INSERT' and new.depth = 1 then
     update projects set remix_count = remix_count + 1 where id = new.ancestor_id;
@@ -233,7 +233,7 @@ end;
 $$;
 
 create trigger remix_lineage_count after insert or delete on remix_lineage
-  for each row execute function bump_remix_counter();
+  for each row execute function remaxx_bump_remix_counter();
 
 -- ── Trust and safety ────────────────────────────────────────────────────────
 create type report_status as enum ('open', 'actioned', 'dismissed');

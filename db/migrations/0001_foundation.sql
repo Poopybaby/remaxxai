@@ -36,7 +36,7 @@ create table waitlist (
   created_at timestamptz not null default now()
 );
 
-create function set_updated_at() returns trigger language plpgsql as $$
+create function remaxx_set_updated_at() returns trigger language plpgsql as $$
 begin
   new.updated_at = now();
   return new;
@@ -45,7 +45,7 @@ $$;
 
 create trigger profiles_set_updated_at
   before update on profiles
-  for each row execute function set_updated_at();
+  for each row execute function remaxx_set_updated_at();
 
 alter table profiles enable row level security;
 alter table legal_acceptances enable row level security;
