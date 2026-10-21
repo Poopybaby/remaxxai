@@ -26,9 +26,12 @@ export function serverEnv(): ServerEnv {
     DATABASE_URL: emptyToUndefined(process.env.DATABASE_URL),
     NEXT_PUBLIC_SUPABASE_URL: emptyToUndefined(process.env.NEXT_PUBLIC_SUPABASE_URL),
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: emptyToUndefined(
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     ),
-    SUPABASE_SECRET_KEY: emptyToUndefined(process.env.SUPABASE_SECRET_KEY),
+    // SUPABASE_SERVICE_ROLE_KEY is the name Vercel's Supabase integration uses.
+    SUPABASE_SECRET_KEY: emptyToUndefined(
+      process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+    ),
     UPSTASH_REDIS_REST_URL: emptyToUndefined(process.env.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: emptyToUndefined(process.env.UPSTASH_REDIS_REST_TOKEN),
     OPENAI_API_KEY: emptyToUndefined(process.env.OPENAI_API_KEY),
@@ -44,7 +47,8 @@ export function serverEnv(): ServerEnv {
 }
 
 function emptyToUndefined(value: string | undefined): string | undefined {
-  return value === undefined || value.trim() === "" ? undefined : value;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 export class MissingConfigError extends Error {
