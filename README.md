@@ -46,7 +46,7 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
    - Google: create an OAuth client in Google Cloud Console; authorized redirect URI is the callback URL Supabase shows you.
    - GitHub: GitHub → Settings → Developer settings → OAuth Apps → New, with the same Supabase callback URL.
 4. **Auth → SMTP:** before launch, connect a real email sender (e.g. Resend). Supabase's built-in mailer is heavily rate-limited.
-5. Run `pnpm db:migrate` and `pnpm storage:setup`.
+5. Run `pnpm db:migrate` and `pnpm storage:setup`. No terminal access to your database? Run `pnpm db:setup-sql`, paste the output into Supabase → SQL Editor and click Run; it does the same thing and is safe to run twice.
 6. Make yourself an admin after you've signed up: `pnpm db:make-admin <your-handle>`.
 
 ## Scripts
