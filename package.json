@@ -16,7 +16,8 @@
     "db:make-admin": "tsx scripts/make-admin.ts",
     "storage:setup": "tsx scripts/setup-storage.ts",
     "check:bundle": "tsx scripts/check-client-bundle.ts",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle"
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle",
+    "db:setup-sql": "tsx scripts/setup-sql.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
