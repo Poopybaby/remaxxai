@@ -1,0 +1,267 @@
+# REMAXX — Build Plan
+
+**Status:** Draft for approval, revised Oct 21, 2026 with your answers to Q1–Q3 and Q6a. No app code written yet.
+**Goal:** A community gallery of license-clean, AI-built templates + a browser editor where beginners remix them with Claude / ChatGPT / Gemini / DeepSeek and republish with credit.
+
+---
+
+## 1. Stack (confirmed, with three changes)
+
+| Layer            | Choice                                                                                                                                                                                                                | Why                                                                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App              | **Next.js (App Router, latest stable) + TypeScript strict + Tailwind**                                                                                                                                                | As recommended. Single app, no monorepo — less to maintain.                                                                                                                                                                  |
+| UI kit           | Radix primitives + our own components (shadcn-style, copied in, not a dependency)                                                                                                                                     | Accessible by default, fully themeable to the REMAXX look.                                                                                                                                                                   |
+| Database         | **Supabase Postgres + pgvector**                                                                                                                                                                                      | One vendor for DB, auth, and storage = one dashboard, one bill, fewer keys.                                                                                                                                                  |
+| ORM / migrations | **Drizzle ORM + drizzle-kit**                                                                                                                                                                                         | Typed queries, plain SQL migrations checked into git.                                                                                                                                                                        |
+| Auth             | **Supabase Auth** (email magic link + password, Google, GitHub) — _confirmed_                                                                                                                                         | Lives in the same Postgres, free up to 50k MAU, no per-seat pricing. Clerk is nicer UI but adds a second user store to sync.                                                                                                 |
+| Storage          | **Supabase Storage** (private bucket for project files, public bucket for covers)                                                                                                                                     | Same vendor. Files stored content-addressed (by SHA-256) so a remix copies zero bytes until something changes. Can move to R2 later if egress costs grow.                                                                    |
+| AI layer         | **Vercel AI SDK** (`ai` + `@ai-sdk/anthropic`, `/openai`, `/google`, `/deepseek`) behind our own `lib/ai` wrapper                                                                                                     | One streaming interface, structured output, token usage reporting. Adding a model = one entry in `config/models.ts`.                                                                                                         |
+| Embeddings       | OpenAI `text-embedding-3-small` (1536-dim)                                                                                                                                                                            | Cheap, good quality. Dimension is fixed in the schema; switching providers later means a re-embed script (provided).                                                                                                         |
+| Code editor      | **CodeMirror 6** (via Sandpack's editor) — _changed from Monaco_                                                                                                                                                      | Monaco is ~2–3 MB and doesn't work on phones. CodeMirror is a fraction of the size, works on touch, and has a merge/diff view for reviewing AI edits. Mobile-first + fast load is the reason.                                |
+| Preview runtime  | **Two modes — changed from "WebContainers or Sandpack"**: (a) static HTML/CSS/JS served from a **separate preview domain** in an `<iframe sandbox="allow-scripts">`; (b) React projects via **Sandpack** (Apache-2.0) | WebContainers require a paid commercial license for for-profit production use and run Node in the browser, which we don't need. Most templates are static; React covers the rest. No uploaded code ever runs on our servers. |
+| Rate limiting    | **Upstash Redis** + `@upstash/ratelimit` (in-memory fallback in dev)                                                                                                                                                  | Works on serverless; per-user and per-IP sliding windows.                                                                                                                                                                    |
+| Moderation       | OpenAI Moderation API (free) for prompts, titles, descriptions, images + our own file scanner                                                                                                                         | See §5.                                                                                                                                                                                                                      |
+| Payments         | **Stripe** (Checkout + Customer Portal + webhooks), test mode only                                                                                                                                                    | As recommended.                                                                                                                                                                                                              |
+| Email            | Resend (for auth emails + waitlist + notifications)                                                                                                                                                                   | Supabase's built-in mailer is rate-limited and not for production.                                                                                                                                                           |
+| Voice            | Web Speech API (Chrome, Edge, Safari); button hidden where unsupported. Fallback STT provider later.                                                                                                                  | As recommended.                                                                                                                                                                                                              |
+| Monitoring       | Sentry (errors), PostHog (product analytics) — Phase 6                                                                                                                                                                |                                                                                                                                                                                                                              |
+| Tests            | **Vitest** for unit/integration against **PGlite** (in-process Postgres with pgvector), **Playwright** for e2e smoke                                                                                                  | CI needs no database service; money/permission logic runs against real SQL.                                                                                                                                                  |
+| Deploy           | Vercel + GitHub Actions (lint, type-check, test, build)                                                                                                                                                               | As recommended.                                                                                                                                                                                                              |
+
+**Supported project types in MVP:** `static` (HTML/CSS/JS, CDN libraries allowed) and `react` (single-page, npm deps resolved by Sandpack). No backends, no server code, no databases inside templates. Uploads that need a server are rejected with a friendly message.
+
+---
+
+## 2. Folder structure
+
+```
+remaxx/
+├─ app/
+│  ├─ (marketing)/            page.tsx (landing), waitlist
+│  ├─ (legal)/                terms, acceptable-use, privacy, dmca  ← marked DRAFT
+│  ├─ (auth)/                 login, auth/callback
+│  ├─ (app)/
+│  │  ├─ explore/             gallery + filters + vibe search
+│  │  ├─ p/[slug]/            project detail, preview, files, lineage
+│  │  ├─ u/[handle]/          creator profile / portfolio
+│  │  ├─ upload/              upload wizard
+│  │  ├─ remix/[projectId]/   editor
+│  │  ├─ collections/  settings/  billing/  notifications/
+│  ├─ admin/                  reports queue, users, usage, model costs
+│  └─ api/
+│     ├─ ai/edit  ai/explain  ai/estimate
+│     ├─ search/  upload/  report/
+│     └─ stripe/webhook/
+├─ preview-host/              handlers that ONLY answer on the preview domain
+├─ components/  ui/ gallery/ editor/ project/ layout/
+├─ config/
+│  ├─ models.ts               ← add a model here
+│  ├─ plans.ts                ← all pricing, credits, tier→model access
+│  ├─ licenses.ts             ← license catalog + remix compatibility rules
+│  └─ limits.ts               ← file sizes, rate limits, timeouts
+├─ lib/
+│  ├─ ai/          registry, run (auth→rate limit→hold→call→settle), prompts, diff
+│  ├─ credits/     ledger, pricing, holds
+│  ├─ licensing/   chain, compatibility
+│  ├─ auth/        session, permissions (canEdit, canPublish, isAdmin…)
+│  ├─ db/          schema.ts, client.ts, queries/
+│  ├─ storage/  upload/ (validate, unzip, scan)  moderation/  ratelimit/  search/  stripe/
+├─ db/migrations/
+├─ scripts/  seed.ts  seed-templates/ (25–30 original templates)  reembed.ts
+├─ tests/    unit/ integration/ e2e/
+├─ .github/workflows/ci.yml
+├─ .env.example   README.md   PLAN.md
+```
+
+---
+
+## 3. Data model
+
+Users live in Supabase's `auth.users`; everything else is ours. All app tables have RLS **enabled with no public policies**, so the browser's anon key can't read or write them directly — every read/write goes through server code that calls tested permission helpers.
+
+**People**
+
+- `profiles` — id (= auth user id), handle (unique), display_name, avatar_url, bio, links, role (`user` | `admin`), created_at
+- `follows` — follower_id, followee_id, created_at (PK both)
+- `waitlist` — email, source, created_at
+
+**Projects**
+
+- `projects` — id, owner_id, slug, title, description, project_type (`static`|`react`), category, tool_used, style_notes, license_id, status (`draft`|`published`|`unpublished`|`removed`), visibility, cover_url, current_version_id, parent_project_id, parent_version_id, root_project_id, like_count, save_count, remix_count, published_at, created_at
+- `project_versions` — id, project_id, number, message, created_by (`user`|`ai`), ai_message_id, created_at — immutable snapshots
+- `project_files` — version_id, path, blob_sha256, size, mime (PK version_id+path)
+- `blobs` — sha256, size, storage_key, scan_status — content-addressed, shared across versions/remixes
+- `remix_lineage` — ancestor_id, descendant_id, depth — closure table, so "credit chain" and "remixes of this" are single queries
+- `lineage_credits` — project_id, position, ancestor_project_id, ancestor_title, ancestor_owner_handle, ancestor_license_id — **snapshot taken at remix time** so credit survives renames/deletions
+- `rights_attestations` — project_id, user_id, license_id, attested_text_version, ip_hash, created_at — proof of the "I own this / have permission" checkbox
+- `licenses` — id, spdx_id, name, url, commercial_ok, derivatives_ok, attribution_required, share_alike, compatible_remix_license_ids[]
+- `tags`, `project_tags`
+
+**Social**
+
+- `likes` — user_id, project_id
+- `collections` — id, owner_id, name, is_default ("Saved"), visibility
+- `collection_items` — collection_id, project_id
+- `comments` — Phase 6, optional
+- `notifications` — Phase 6
+
+**Search**
+
+- `project_embeddings` — project_id, version_id, model, embedding vector(1536), source_text, style_description, created_at — HNSW index; plus a generated `tsvector` on projects for keyword search
+
+**AI**
+
+- `ai_sessions` — id, user_id, project_id, created_at
+- `ai_messages` — id, session_id, role, content, attachments, model_id, action (`edit`|`explain`), input_tokens, output_tokens, provider_cost_usd, credits_charged, proposed_changes (json), outcome (`accepted`|`rejected`|`partial`|`error`), latency_ms, created_at
+
+**Money**
+
+- `credit_accounts` — user_id, balance (cached), updated_at — row lock target for concurrency
+- `credit_ledger` — **append-only** (UPDATE/DELETE blocked by trigger): id, user_id, delta (int), kind (`trial_grant`|`subscription_grant`|`topup`|`hold`|`release`|`spend`|`refund`|`expiry`|`admin_adjust`), ref_type, ref_id, idempotency_key (unique), meta, created_at. Invariant (tested): `balance == SUM(delta)`.
+- `subscriptions` — user_id, stripe_customer_id, stripe_subscription_id, plan_id, status, current_period_end, cancel_at_period_end
+- `stripe_events` — event id (PK), type, processed_at — webhook idempotency
+
+**Trust & safety**
+
+- `reports` — id, reporter_id (nullable for DMCA form), target_type, target_id, reason (`copyright`|`malware`|`leaked_code`|`nsfw`|`spam`|`other`), details, contact_email, status (`open`|`actioned`|`dismissed`), resolved_by, resolution_note, created_at
+- `moderation_events` — subject, verdict, categories, created_at
+- `admin_audit_log` — admin_id, action, target, before/after, created_at
+
+---
+
+## 4. How the AI + credits pipeline works (every AI endpoint)
+
+1. **Auth** — signed-in user required.
+2. **Rate limit** — per user + per IP, per tier (Upstash).
+3. **Moderate** the prompt (and any image).
+4. **Estimate** cost = max input tokens (project context + prompt) and max output tokens × model price from `config/models.ts`. Shown to the user _before_ expensive actions.
+5. **Hold** — in one transaction: lock `credit_accounts`, refuse if balance < estimate (**hard stop at zero**), write a `hold` row.
+6. **Call** the model with a timeout (AbortSignal, ~120s) and streaming.
+7. **Settle** — write `spend` for actual usage and `release` for the unused hold; on provider error, release the full hold. Idempotency keys make retries safe.
+8. **Log** tokens, provider cost, credits, latency to `ai_messages`.
+
+AI edits come back as structured file changes (validated with Zod), shown as per-file diffs. Accept → new `project_version`. Undo → restore any previous version.
+
+Credits formula (all knobs in `config/plans.ts`):
+`credits = ceil(provider_cost_usd × markup / credit_value_usd)` — placeholder markup 2.5×, 1 credit = $0.01. I'll produce a "cost per typical prompt by model" table in Phase 5 once current model prices are pinned.
+
+---
+
+## 5. Safety rules as built
+
+- **Separate preview origin:** previews served only from a different registrable domain (e.g. `remaxxusercontent.com`), never `*.remaxx.ai`, with strict CSP, `sandbox="allow-scripts"` (no `allow-same-origin`, no top navigation, no forms to our domain). No cookies ever set on that domain.
+- **Uploads:** extension + magic-byte allowlist (html, css, js, jsx, ts, tsx, json, md, svg, png, jpg, webp, gif, woff2, txt). Limits: 25 MB zip, 50 MB unpacked, 500 files, 5 MB per file. Zip-bomb and path-traversal checks. Reject executables, archives-in-archives, `.env` / key-looking files.
+- **Abuse scan (heuristic):** flags crypto-miner signatures, credential-harvesting forms posting off-site, heavy obfuscation (`eval` of long encoded strings), known-bad hosts. Flagged → held for admin review, not auto-published.
+- **Moderation** on titles, descriptions, tags, cover images, and every prompt.
+- **License + attestation** required before publish; remixes can only pick licenses allowed by the whole ancestor chain.
+- **Report button** on every project/profile; public **DMCA form**; admin queue can unpublish instantly; owners notified.
+- **Keys** only in server env vars; no `NEXT_PUBLIC_` AI keys; a CI check greps the client bundle for key patterns.
+- **ToS / Acceptable Use / Privacy / DMCA** pages ship with a visible "DRAFT — pending legal review" banner.
+
+---
+
+## 6. Phase checklist
+
+**Phase 1 — Foundation**
+
+- [ ] Scaffold, strict TS, ESLint, Prettier, Tailwind design tokens (dark theme, REMAXX wordmark, type scale, card styles)
+- [ ] Supabase project wiring, Drizzle schema for profiles/waitlist, first migrations
+- [ ] Auth: email + Google + GitHub, profile creation with handle on first login
+- [ ] Base layout (mobile-first nav), one-screen landing page with waitlist + sign-up CTA
+- [ ] Storage buckets + upload helper; preview-domain routing skeleton
+- [ ] Legal page stubs (DRAFT banners)
+- [ ] GitHub Actions CI; `.env.example`; README v1
+- [ ] Tests: permission helpers, handle validation
+
+**Phase 2 — Gallery**
+
+- [ ] Full project/version/file/license/tag/social schema
+- [ ] Upload wizard: zip / folder / single HTML, cover, metadata, license, rights checkbox; validation + scan + moderation
+- [ ] Project page: big sandboxed preview, file browser, credit chain, report button
+- [ ] Likes, saves/collections, follows; explore grid with filters (tool, category, style, license)
+- [ ] Report + admin review queue (basic), unpublish
+- [ ] Seed: 25–30 original templates I write, varied aesthetics, all CC0 or MIT, with covers generated from screenshots
+- [ ] Tests: license compatibility + credit chain, upload validator, permissions
+
+**Phase 3 — Vibe Search**
+
+- [ ] AI-written style description per project (from code + cover), embeddings on publish and in seed
+- [ ] Hybrid search: vector similarity + keyword + filters, blended score
+- [ ] "Why it matched" chips (matched tags, style phrases, similarity)
+- [ ] "More like this" on every project page
+- [ ] Tests: ranking blend on a fixed fixture set
+
+**Phase 4 — Remix Editor**
+
+- [ ] Remix → new draft + lineage rows + credit snapshot
+- [ ] Editor: file tree, CodeMirror, live preview, prompt panel (resizable desktop; tabbed on mobile)
+- [ ] Model registry + picker (Claude, ChatGPT, Gemini, DeepSeek); image upload disabled for models without vision
+- [ ] Voice input (Web Speech API)
+- [ ] AI edit → per-file diff review → accept / reject / undo; version history
+- [ ] "Break it down": plain-English walkthrough of stack, files, and logic
+- [ ] Rate limits, timeouts, moderation on every AI route (credits stubbed until Phase 5)
+- [ ] Tests: diff application, AI pipeline with mocked providers
+
+**Phase 5 — Publish & Credits**
+
+- [ ] Publish remix with auto credit chain + license guard
+- [ ] Ledger, holds, settlement, balance display, pre-action cost estimate, hard stop
+- [ ] Free trial prompts, paywall, Stripe Checkout + Portal + webhooks (test mode), monthly grants
+- [ ] Tier → model access enforcement; Power tier gets higher rate limits/concurrency
+- [ ] Tests: ledger invariant, concurrent spends, webhook idempotency, refund on failure, tier gating
+
+**Phase 6 — Polish & Launch**
+
+- [ ] Creator portfolios, trending/new/staff-picks, notifications
+- [ ] SEO + dynamic Open Graph image per project
+- [ ] Admin dashboard: reports, users, credit/usage, model cost vs revenue
+- [ ] Sentry, PostHog, accessibility pass (WCAG AA), mobile pass, Lighthouse budget
+- [ ] Final legal pages (still DRAFT), deployment guide, Playwright smoke suite in CI
+
+---
+
+## 7. Keys you'll need to supply (by phase)
+
+| Phase | Keys                                                                                                                                                                                                |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`; Google + GitHub OAuth apps (entered in the Supabase dashboard, not env); `RESEND_API_KEY` |
+| 2     | `NEXT_PUBLIC_PREVIEW_ORIGIN` (the second domain)                                                                                                                                                    |
+| 3     | `OPENAI_API_KEY` (embeddings + moderation)                                                                                                                                                          |
+| 4     | `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `DEEPSEEK_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                       |
+| 5     | `STRIPE_SECRET_KEY` (test), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, Stripe price IDs                                                                                         |
+| 6     | `SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_KEY`                                                                                                                                                             |
+
+Until keys arrive I can build and test everything against PGlite and mocked providers.
+
+---
+
+## 8. Questions (expensive to undo)
+
+**All decided Oct 21, 2026.** Plan approved; building Phase 1.
+
+**Q1. Auth provider — DECIDED:** Supabase Auth.
+
+**Q2. Billing — DECIDED: defaults as written, no top-up packs at launch.**
+
+- a. Free tier = **2 free prompts** on a cheap model, **sign-up + verified email required** (no card). Blocks anonymous abuse.
+- b. Monthly subscription credits **expire at period end**. Top-up packs are not in the launch scope (the ledger already supports a `topup` kind, so adding them later is a config + Stripe price change).
+- c. Markup 2.5× over provider cost, 1 credit = $0.01. Placeholder plans: Starter $14 / 600 cr, Pro $34 / 1,800 cr, Power $89 / 5,500 cr. Annual plans: later.
+- d. Failed or timed-out AI calls are fully refunded; rejected-but-successful edits are still charged (the model did the work).
+- e. "Priority processing" for Power = higher rate limits and concurrent requests (there's no real queue to jump with direct API calls).
+
+**Q3. License rules — DECIDED: catalog and rules as written; Personal Use templates are remixable, and their remixes must stay Personal Use.**
+
+- Allowed on upload: MIT, Apache-2.0, CC-BY-4.0, CC-BY-SA-4.0, CC0, and "REMAXX Personal Use" (remix on REMAXX allowed, no commercial use).
+- **No "No-Derivatives" licenses** — remixing is the whole point.
+- Remix license must be compatible with every ancestor: CC0 → anything; MIT/Apache/CC-BY → anything, attribution kept; CC-BY-SA → stays CC-BY-SA; Personal Use → stays Personal Use.
+
+**Q4. Takedown cascade — DECIDED:** when an original is removed for copyright, its descendants are **hidden pending admin review** (not auto-deleted), and their credit line shows "original removed."
+
+**Q5. Minimum age — DECIDED:** **18+** at launch. Sign-up requires an age confirmation checkbox, recorded with the terms acceptance.
+
+**Q6. Logistics — DECIDED:**
+
+- a. Code lives in `github.com/Poopybaby/remaxxai` (private).
+- b/c. `remaxx.ai` and a preview domain (e.g. `remaxxusercontent.com`) will be bought on GoDaddy. Until then, dev uses `localhost:3000` for the app and `127.0.0.1:3000` as the stand-in preview origin; both are env-configurable (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PREVIEW_ORIGIN`).
+
+**Notes for your lawyer** (not blocking): register a DMCA designated agent with the U.S. Copyright Office to get safe-harbor protection; DeepSeek's API processes data in China, which the Privacy Policy should disclose (I'll label it in the model picker too); ToS should include the license users grant REMAXX to host and display uploads.

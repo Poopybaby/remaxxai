@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * REMAXX design tokens.
+ * Ink-indigo base, one type family (Archivo) used at two widths, and a magenta/cyan pair that
+ * appears as a misregistered print split on the wordmark. Magenta = action, cyan = focus.
+ */
+@theme {
+  --color-ink: #0f0d1e;
+  --color-ink-deep: #0a0916;
+  --color-panel: #1a1730;
+  --color-panel-raised: #231f3e;
+  --color-line: #2e2a4d;
+  --color-line-strong: #433d6b;
+  --color-fg: #f4f2ff;
+  --color-muted: #a9a4c9;
+  --color-faint: #7c779e;
+  --color-magenta: #ff3dcb;
+  --color-magenta-strong: #ff6ad8;
+  --color-cyan: #3de8ff;
+  --color-danger: #ff6b7d;
+  --color-success: #5ef2b0;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Type scale (1.25 ratio from 16px) */
+  --text-display: clamp(2.5rem, 5.6vw, 4.5rem);
+  --text-display--line-height: 0.95;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-ink);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background: var(--color-ink);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-magenta) 45%, transparent);
+    color: var(--color-fg);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Expanded width for display type. Archivo's wdth axis goes to 125. */
+  .type-wide {
+    font-stretch: 125%;
+    font-variation-settings: "wdth" 125;
+  }
+
+  /* The wordmark: two color plates slightly out of register, white on top. */
+  .wordmark {
+    font-stretch: 125%;
+    font-variation-settings: "wdth" 125;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--color-fg);
+    text-shadow:
+      -0.045em 0 0 var(--color-magenta),
+      0.045em 0 0 var(--color-cyan);
+  }
+
+  .prose-legal {
+    max-width: 68ch;
+    color: var(--color-muted);
+    line-height: 1.7;
+  }
+  .prose-legal h2 {
+    color: var(--color-fg);
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .prose-legal h3 {
+    color: var(--color-fg);
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .prose-legal p,
+  .prose-legal ul,
+  .prose-legal ol {
+    margin-bottom: 1rem;
+  }
+  .prose-legal ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .prose-legal ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .prose-legal li + li {
+    margin-top: 0.35rem;
+  }
+  .prose-legal a {
+    color: var(--color-fg);
+    text-decoration: underline;
+    text-decoration-color: var(--color-magenta);
+    text-underline-offset: 3px;
+  }
+  .prose-legal strong {
+    color: var(--color-fg);
+  }
+}
+
+/* The hero's one orchestrated moment: the remix cards fan out from a stack. */
+@keyframes fan-in {
+  from {
+    transform: translate(var(--from-x, 0), 24px) rotate(0deg);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0) rotate(var(--tilt, 0deg));
+    opacity: 1;
+  }
+}
+
+.fan-card {
+  transform: rotate(var(--tilt, 0deg));
+  animation: fan-in 900ms var(--ease-out-quint) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fan-card {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }
