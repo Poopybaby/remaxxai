@@ -185,11 +185,11 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 3 — Vibe Search**
 
-- [ ] AI-written style description per project (from code + cover), embeddings on publish and in seed
-- [ ] Hybrid search: vector similarity + keyword + filters, blended score
-- [ ] "Why it matched" chips (matched tags, style phrases, similarity)
-- [ ] "More like this" on every project page
-- [ ] Tests: ranking blend on a fixed fixture set
+- [x] AI-written style description per project (from code; hand-written for the seed), embeddings on publish and in the background
+- [x] Hybrid search: vector similarity + keyword + filters, blended score
+- [x] "Why it matched" chips (matched styles, category, tags, words, vibe)
+- [x] "More like this" on every project page
+- [x] Tests: ranking blend on a fixed fixture set (the 29 starter templates), indexer, search and similarity on Postgres + pgvector
 
 **Phase 4 — Remix Editor**
 
@@ -224,6 +224,13 @@ Credits formula (all knobs in `config/plans.ts`):
 - Upload size is 4 MB because uploads pass through a Vercel function (4.5 MB body limit). Direct-to-storage uploads can lift this.
 - Project files and covers are stored in Postgres (content-addressed `blobs`), not Supabase Storage, so setup needs no buckets yet. `blobs.storage_key` is the migration path.
 - Seed templates belong to an official @remaxx_studio account and start with zero likes: no fake engagement.
+
+**Phase 3 build notes:**
+
+- Descriptions are written from code, not from the cover image: cheaper, and code is what the clues come from. Image-aware descriptions can be added by passing the cover to a vision model.
+- Search is open to signed-out visitors (the gallery is public). It costs REMAXX a fraction of a cent per new query, is rate-limited per IP, and is never charged to user credits; credits apply to editor AI calls from Phase 4.
+- Without `OPENAI_API_KEY` everything still works with word matching; adding the key later fills in embeddings automatically.
+- `OPENAI_BASE_URL` can point the platform AI calls at an OpenAI-compatible gateway.
 
 ---
 

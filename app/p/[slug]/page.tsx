@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { LicenseBadge } from "@/components/gallery/license-badge";
+import { ProjectGrid } from "@/components/gallery/project-card";
 import {
   FollowButton,
   LikeSaveButtons,
@@ -25,6 +26,7 @@ import {
   getViewerProjectState,
   listVersionFiles,
 } from "@/lib/projects/queries";
+import { getStyleDescription, similarProjects } from "@/lib/search/query";
 
 export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -65,13 +67,14 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
     notFound();
 
   const versionId = project.currentVersionId;
-  const [files, credits, followCounts, viewerState] = await Promise.all([
+  const [files, credits, followCounts, viewerState, lookAndFeel] = await Promise.all([
     versionId ? listVersionFiles(db, versionId) : Promise.resolve([]),
     getCreditChain(db, project.id),
     getFollowCounts(db, project.owner.id),
     viewer
       ? getViewerProjectState(db, viewer.userId, project.id, project.owner.id)
       : Promise.resolve(null),
+    getStyleDescription(db, project.id),
   ]);
 
   const isOwner = viewer?.userId === project.owner.id;
@@ -168,6 +171,14 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
               {project.description}
             </p>
           ) : null}
+          {lookAndFeel ? (
+            <section aria-labelledby="look-heading" className="flex max-w-[68ch] flex-col gap-1.5">
+              <h2 id="look-heading" className="text-faint text-sm font-semibold">
+                Look and feel
+              </h2>
+              <p className="text-muted leading-relaxed">{lookAndFeel}</p>
+            </section>
+          ) : null}
           {credits.length ? <CreditChain credits={credits} /> : null}
         </div>
 
@@ -248,7 +259,29 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
           </div>
         </aside>
       </div>
+
+      {published ? (
+        <Suspense fallback={null}>
+          <MoreLikeThis projectId={project.id} />
+        </Suspense>
+      ) : null}
     </article>
+  );
+}
+
+async function MoreLikeThis({ projectId }: { projectId: string }) {
+  const cards = await similarProjects(getDb(), projectId, 8);
+  if (cards.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="similar-heading"
+      className="border-line mt-6 flex flex-col gap-5 border-t pt-10"
+    >
+      <h2 id="similar-heading" className="type-wide text-2xl font-black">
+        More like this
+      </h2>
+      <ProjectGrid cards={cards} />
+    </section>
   );
 }
 

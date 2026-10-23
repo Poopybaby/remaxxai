@@ -1,5 +1,5 @@
 /** Read queries for the gallery. Callers apply permission checks (see lib/auth/permissions). */
-import { and, asc, desc, eq, exists, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { isLicenseId, type LicenseId } from "@/config/licenses";
 import {
   blobs,
@@ -104,11 +104,33 @@ function likePattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
+/** Published, plus the dropdown/chip filters. Shared by the gallery list and vibe search. */
+export function filterConditions(filters: ExploreFilters): SQL[] {
+  const conditions: SQL[] = [eq(projects.status, "published")];
+  if (filters.category) conditions.push(eq(projects.category, filters.category));
+  if (filters.tool) conditions.push(eq(projects.toolUsed, filters.tool));
+  if (filters.license) conditions.push(eq(projects.licenseId, filters.license));
+  if (filters.style) conditions.push(hasTag(filters.style));
+  return conditions;
+}
+
+/** Cards for the given ids, returned in the same order. Only published projects. */
+export async function getCardsByIds(db: Db, ids: string[]): Promise<ProjectCard[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select(cardColumns)
+    .from(projects)
+    .innerJoin(profiles, eq(profiles.id, projects.ownerId))
+    .where(and(inArray(projects.id, ids), eq(projects.status, "published")));
+  const byId = new Map(rows.map((r) => [r.id, toCard(r)]));
+  return ids.map((id) => byId.get(id)).filter((c): c is ProjectCard => c !== undefined);
+}
+
 export async function listPublishedProjects(
   db: Db,
   filters: ExploreFilters,
 ): Promise<{ cards: ProjectCard[]; hasMore: boolean }> {
-  const conditions: SQL[] = [eq(projects.status, "published")];
+  const conditions = filterConditions(filters);
   const q = filters.q?.trim().slice(0, 100);
   if (q) {
     const pattern = likePattern(q);
@@ -123,10 +145,6 @@ export async function listPublishedProjects(
       )!,
     );
   }
-  if (filters.category) conditions.push(eq(projects.category, filters.category));
-  if (filters.tool) conditions.push(eq(projects.toolUsed, filters.tool));
-  if (filters.license) conditions.push(eq(projects.licenseId, filters.license));
-  if (filters.style) conditions.push(hasTag(filters.style));
 
   const page = Math.max(1, Math.min(filters.page ?? 1, 100));
   const order =

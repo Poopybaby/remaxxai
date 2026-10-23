@@ -2,6 +2,7 @@
  * Typed mirror of db/migrations/*.sql. The SQL migrations are the source of truth;
  * tests/integration/schema.test.ts fails if this file and the migrated database drift apart.
  */
+import { sql } from "drizzle-orm";
 import {
   boolean,
   customType,
@@ -14,6 +15,7 @@ import {
   timestamp,
   unique,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["user", "admin"]);
@@ -300,4 +302,26 @@ export const adminAuditLog = pgTable("admin_audit_log", {
   targetId: uuid("target_id"),
   detail: jsonb("detail").notNull().default({}),
   createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+// ── Phase 3: vibe search ───────────────────────────────────────────────────────
+
+/** Read-only here: Postgres computes it from search_text. */
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const EMBEDDING_DIMENSIONS = 1536;
+
+export const projectSearch = pgTable("project_search", {
+  projectId: uuid("project_id").primaryKey(),
+  versionId: uuid("version_id"),
+  styleDescription: text("style_description").notNull().default(""),
+  styleSource: text("style_source", { enum: ["seed", "ai", "auto"] })
+    .notNull()
+    .default("auto"),
+  searchText: text("search_text").notNull().default(""),
+  searchTsv: tsvector("search_tsv").generatedAlwaysAs(sql`to_tsvector('english', search_text)`),
+  embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
+  embeddingModel: text("embedding_model"),
+  embeddedTextHash: text("embedded_text_hash"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
 });

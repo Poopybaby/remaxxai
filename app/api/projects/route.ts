@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { RATE_LIMITS, UPLOAD_LIMITS } from "@/config/limits";
 import { getViewerContext } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
@@ -7,6 +7,7 @@ import { moderate } from "@/lib/moderation";
 import { createProject } from "@/lib/projects/create";
 import { projectMetadataSchema } from "@/lib/projects/metadata";
 import { rateLimit } from "@/lib/ratelimit";
+import { refreshSearchIndex } from "@/lib/search/background";
 import { sha256Hex } from "@/lib/storage/keys";
 import { detectCoverType } from "@/lib/upload/mime";
 import { scanFiles } from "@/lib/upload/scan";
@@ -131,6 +132,8 @@ export async function POST(request: NextRequest) {
           ? { source: "skipped", verdict: "pass", categories: [] }
           : { source: "openai", verdict: verdict.verdict, categories: verdict.categories },
     });
+    // Describe and embed it for vibe search once the response is sent (published projects only).
+    if (project.status === "published") after(() => refreshSearchIndex([project.id]));
     return NextResponse.json({ slug: project.slug, status: project.status }, { status: 201 });
   } catch (err) {
     console.error("Project upload failed", err);

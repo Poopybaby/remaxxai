@@ -12,6 +12,8 @@ export const RATE_LIMITS = {
   social: { limit: 120, windowMs: 10 * MINUTE },
   report: { limit: 10, windowMs: HOUR },
   dmca: { limit: 5, windowMs: HOUR },
+  // Vibe searches that need a fresh embedding (cached queries and keyword searches are free).
+  vibeSearch: { limit: 30, windowMs: MINUTE },
 } as const satisfies Record<string, RateLimitRule>;
 
 const KB = 1024;

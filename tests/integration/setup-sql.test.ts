@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite-pgvector";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildSetupSql } from "@/lib/db/setup-sql";
 import { buildSeedSql } from "@/lib/seed/build-sql";
@@ -47,7 +48,7 @@ afterEach(async () => {
 });
 
 async function freshDb(extra = ""): Promise<PGlite> {
-  pg = new PGlite();
+  pg = new PGlite({ extensions: { vector } });
   await pg.exec(SUPABASE_STUB + extra);
   return pg;
 }
@@ -60,7 +61,11 @@ describe("first-time setup SQL", () => {
     await db.exec(setup); // pasted twice by mistake: still fine
 
     const applied = await db.query<{ name: string }>("select name from schema_migrations");
-    expect(applied.rows.map((r) => r.name)).toEqual(["0001_foundation.sql", "0002_gallery.sql"]);
+    expect(applied.rows.map((r) => r.name)).toEqual([
+      "0001_foundation.sql",
+      "0002_gallery.sql",
+      "0003_vibe_search.sql",
+    ]);
 
     // Old table kept under a new name; tasks still works with its own set_updated_at.
     await db.query("select * from profiles_legacy");
@@ -76,6 +81,29 @@ describe("first-time setup SQL", () => {
       "select count(*)::int as n from projects where status = 'published'",
     );
     expect(n.rows[0]?.n).toBe(29);
+  });
+
+  it("upgrades a project that already ran the Phase 2 setup, keeping its data", async () => {
+    const db = await freshDb(STARTER_TEMPLATE);
+    // Phase 2's setup: the same script, minus the newer migrations.
+    const phase2 = (await buildSetupSql()).replace(
+      /-- 0003_vibe_search\.sql[\s\S]*?\$setup\$;\n/,
+      "",
+    );
+    expect(phase2).not.toContain("create table project_search");
+    await db.exec(phase2);
+    await db.exec(await buildSeedSql());
+
+    await db.exec(await buildSetupSql());
+    await db.exec(await buildSeedSql());
+    const applied = await db.query<{ name: string }>(
+      "select name from schema_migrations order by name",
+    );
+    expect(applied.rows.map((r) => r.name)).toContain("0003_vibe_search.sql");
+    const counts = await db.query<{ projects: number; indexed: number }>(
+      "select (select count(*)::int from projects) as projects, (select count(*)::int from project_search) as indexed",
+    );
+    expect(counts.rows[0]).toEqual({ projects: 29, indexed: 29 });
   });
 
   it("works on a brand-new project", async () => {

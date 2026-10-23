@@ -7,6 +7,8 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { SEED_TEMPLATES, STUDIO, type SeedTemplate } from "@/seed/catalog";
+import { SEED_VIBES } from "@/seed/vibes";
+import { buildSearchText } from "@/lib/search/text";
 import { RIGHTS_STATEMENT_VERSION } from "@/lib/projects/metadata";
 import { scanFiles } from "@/lib/upload/scan";
 import type { UploadFile } from "@/lib/upload/types";
@@ -127,6 +129,8 @@ export async function buildSeedSql(templates?: LoadedTemplate[]): Promise<string
     "",
   ];
 
+  const searchRows: string[] = [];
+
   // Parents before remixes.
   const ordered = [...list].sort((a, b) => depth(a) - depth(b));
   function depth(t: SeedTemplate): number {
@@ -178,6 +182,23 @@ export async function buildSeedSql(templates?: LoadedTemplate[]): Promise<string
         `insert into project_tags (project_id, tag_id) select ${q(pid)}, id from tags where slug in (${[...t.styles, ...t.tags].map(q).join(", ")}) on conflict do nothing;`,
       );
     }
+    // Search index row with the hand-written look-and-feel. The app adds the embedding later.
+    const vibe = SEED_VIBES[t.slug];
+    if (!vibe) throw new Error(`Seed template ${t.slug} has no entry in seed/vibes.ts`);
+    const searchText = buildSearchText({
+      title: t.title,
+      description: t.description,
+      category: t.category,
+      toolUsed: t.tool,
+      styles: t.styles,
+      tags: t.tags.filter((x) => !(t.styles as string[]).includes(x)),
+      styleDescription: vibe,
+    });
+    searchRows.push(
+      `insert into project_search (project_id, version_id, style_description, style_source, search_text) ` +
+        `values (${q(pid)}, ${q(vid)}, ${q(vibe)}, 'seed', ${q(searchText)}) ` +
+        `on conflict (project_id) do update set version_id = excluded.version_id, style_description = excluded.style_description, search_text = excluded.search_text, style_source = 'seed' where project_search.style_source = 'seed';`,
+    );
     sql.push(
       `insert into rights_attestations (project_id, user_id, license_id, statement_version)`,
       `select ${q(pid)}, ${q(STUDIO.id)}, ${q(t.license)}, ${q(RIGHTS_STATEMENT_VERSION)} where not exists (select 1 from rights_attestations where project_id = ${q(pid)});`,
@@ -208,6 +229,14 @@ export async function buildSeedSql(templates?: LoadedTemplate[]): Promise<string
   sql.push(
     "commit;",
     "",
+    // Search rows only if the vibe search table exists (setup SQL run first); otherwise skip.
+    "do $search$ begin",
+    "  if to_regclass('public.project_search') is null then",
+    "    raise notice 'Vibe search table not found: run the setup SQL, then this seed again.';",
+    "    return;",
+    "  end if;",
+    ...searchRows.map((r) => `  execute $row$${r}$row$;`),
+    "end $search$;",
     "select count(*) as starter_templates from projects where owner_id = " + q(STUDIO.id) + ";",
   );
   return sql.join("\n") + "\n";

@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import type { ProjectStatus } from "@/lib/db/schema";
-import type { ProjectCard as Card } from "@/lib/projects/queries";
+import type { ProjectCard as BaseCard } from "@/lib/projects/queries";
+import type { MatchReason } from "@/lib/search/rank";
 import { LicenseBadge } from "./license-badge";
+
+type Card = BaseCard & { reasons?: MatchReason[] };
 
 const STATUS_LABEL: Partial<Record<ProjectStatus, string>> = {
   pending_review: "In review",
@@ -77,8 +80,46 @@ export function ProjectCard({
             </span>
           </span>
         </div>
+        {card.reasons?.length ? <Reasons reasons={card.reasons} /> : null}
       </div>
     </article>
+  );
+}
+
+function reasonText(r: MatchReason): string {
+  switch (r.kind) {
+    case "tag":
+      return `#${r.label}`;
+    case "title":
+      return `“${r.label}” in title`;
+    case "text":
+      return `mentions “${r.label}”`;
+    case "tool":
+      return `Made with ${r.label}`;
+    default:
+      return r.label;
+  }
+}
+
+/** Why a search result or similar project was picked. */
+function Reasons({ reasons }: { reasons: MatchReason[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+      <span className="sr-only">Matched on:</span>
+      {reasons.map((r) => (
+        <span
+          key={`${r.kind}:${r.label}`}
+          className={
+            r.kind === "vibe"
+              ? "border-cyan/40 text-cyan rounded-full border px-2 py-0.5 text-xs font-semibold"
+              : "border-line text-muted rounded-full border px-2 py-0.5 text-xs"
+          }
+        >
+          {r.kind === "vibe" ? "✦ " : ""}
+          {reasonText(r)}
+        </span>
+      ))}
+    </div>
   );
 }
 

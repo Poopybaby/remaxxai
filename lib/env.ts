@@ -14,6 +14,8 @@ const serverSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+  /** Optional: an OpenAI-compatible endpoint (a proxy or gateway). Defaults to api.openai.com. */
+  OPENAI_BASE_URL: z.url().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -35,6 +37,7 @@ export function serverEnv(): ServerEnv {
     UPSTASH_REDIS_REST_URL: emptyToUndefined(process.env.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: emptyToUndefined(process.env.UPSTASH_REDIS_REST_TOKEN),
     OPENAI_API_KEY: emptyToUndefined(process.env.OPENAI_API_KEY),
+    OPENAI_BASE_URL: emptyToUndefined(process.env.OPENAI_BASE_URL),
   });
   if (!parsed.success) {
     const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");

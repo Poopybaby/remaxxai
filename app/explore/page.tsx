@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { after } from "next/server";
 import { Suspense } from "react";
 import { ProjectGrid } from "@/components/gallery/project-card";
 import { buttonClasses } from "@/components/ui/button";
 import { isLicenseId } from "@/config/licenses";
 import { isCategoryId, isStyleId, isToolId } from "@/config/taxonomy";
 import { getDb, isDbConfigured } from "@/lib/db/client";
+import { RATE_LIMITS } from "@/config/limits";
 import { listPublishedProjects, type ExploreFilters } from "@/lib/projects/queries";
+import { clientIp, rateLimit } from "@/lib/ratelimit";
+import { cachedQueryEmbedding, embedQuery, getEmbedder } from "@/lib/search/ai";
+import { refreshSearchIndex } from "@/lib/search/background";
+import { vibeSearch } from "@/lib/search/query";
 import { ExploreControls } from "./explore-controls";
 
 export const metadata: Metadata = {
@@ -63,6 +70,8 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
       <Empty title="The gallery isn't connected yet" body="Add DATABASE_URL to load templates." />
     );
   }
+  if (filters.q?.trim()) return <SearchResults filters={filters} />;
+
   const { cards, hasMore } = await listPublishedProjects(getDb(), filters);
   const active = Boolean(
     filters.q || filters.category || filters.tool || filters.license || filters.style,
@@ -96,6 +105,7 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
 
   return (
     <div className="flex flex-col gap-10">
+      {!active && page === 1 ? <VibeExamples /> : null}
       <ProjectGrid cards={cards} />
       {page > 1 || hasMore ? (
         <nav aria-label="Pages" className="flex items-center justify-center gap-3">
@@ -111,6 +121,83 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
           ) : null}
         </nav>
       ) : null}
+    </div>
+  );
+}
+
+const EXAMPLE_VIBES = [
+  "dark glassy fintech dashboard",
+  "playful pastel booking site",
+  "neon retro arcade game",
+  "calm editorial portfolio",
+  "loud brutalist poster",
+];
+
+function VibeExamples() {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-faint">Search by vibe, try:</span>
+      {EXAMPLE_VIBES.map((v) => (
+        <Link
+          key={v}
+          href={`/explore?q=${encodeURIComponent(v)}`}
+          className="border-line text-muted hover:border-cyan/50 hover:text-fg rounded-full border px-3 py-1"
+        >
+          {v}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Embeds the query when vibe search is on (cached, rate limited, short timeout), then ranks.
+ * Any trouble with the AI side quietly falls back to matching words.
+ */
+async function SearchResults({ filters }: { filters: ExploreFilters }) {
+  const q = (filters.q ?? "").trim();
+  const db = getDb();
+  const embedder = getEmbedder();
+  let queryVector: number[] | null = null;
+  let notice: string | null = null;
+  if (embedder) {
+    queryVector = cachedQueryEmbedding(q) ?? null;
+    if (!queryVector) {
+      const ip = clientIp(await headers());
+      const limit = await rateLimit("vibe-search", ip, RATE_LIMITS.vibeSearch);
+      if (!limit.success) {
+        notice = "You're searching fast, so these results match your words only for a minute.";
+      } else {
+        queryVector = await embedQuery(embedder, q).catch(() => null);
+        if (!queryVector) notice = "Vibe matching is busy, so these results match your words only.";
+      }
+    }
+  }
+  const { cards, mode } = await vibeSearch(db, { q, filters, queryVector });
+  // Pick up anything not yet indexed (new uploads, fresh seeds) after the page is sent.
+  after(() => refreshSearchIndex());
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <p className="text-muted text-sm" role="status">
+          {cards.length === 0
+            ? "No matches"
+            : `${cards.length} ${cards.length === 1 ? "match" : "matches"}`}{" "}
+          for <span className="text-fg font-semibold">“{q}”</span>
+          {mode === "vibe" ? ", ranked by vibe and words" : ", ranked by matching words"}
+        </p>
+        {notice ? <p className="text-faint text-sm">{notice}</p> : null}
+      </div>
+      {cards.length ? (
+        <ProjectGrid cards={cards} />
+      ) : (
+        <Empty
+          title="Nothing matches that vibe yet"
+          body="Try fewer or broader words, like “dark dashboard” or “pastel landing page”."
+          action={{ href: "/explore", label: "Clear search" }}
+        />
+      )}
     </div>
   );
 }

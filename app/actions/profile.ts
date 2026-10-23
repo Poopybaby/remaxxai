@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { RATE_LIMITS } from "@/config/limits";
 import { getViewer, getViewerContext } from "@/lib/auth/viewer";
@@ -39,6 +39,8 @@ export async function createProfileAction(
     };
   }
 
+  // The header lives in the root layout, which a redirect alone doesn't re-render.
+  refresh();
   redirect(safeNextPath(String(formData.get("next") ?? ""), `/u/${result.value.handle}`));
 }
 

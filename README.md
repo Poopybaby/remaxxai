@@ -29,16 +29,17 @@ The app starts without any keys: the landing page and legal pages work, sign-in 
 
 Everything is listed with instructions in [.env.example](./.env.example). Only `NEXT_PUBLIC_*` values reach the browser. AI and payment keys are server-only and CI fails the build if one shows up in the client bundle.
 
-| Variable                                             | Needed for             | Where to get it                                                             |
-| ---------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`                                | Links, metadata        | Your domain, e.g. `https://remaxx.ai`                                       |
-| `NEXT_PUBLIC_PREVIEW_ORIGIN`                         | Sandboxed previews     | Your second domain, e.g. `https://remaxxusercontent.com`                    |
-| `NEXT_PUBLIC_SUPABASE_URL`                           | Auth, storage          | Supabase → Project Settings → API Keys                                      |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`               | Auth in the browser    | Same page (publishable / anon key)                                          |
-| `SUPABASE_SECRET_KEY`                                | Storage admin (server) | Same page (secret / service_role key)                                       |
-| `DATABASE_URL`                                       | Everything with data   | Supabase → Connect → connection string                                      |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits     | Upstash console (optional until launch)                                     |
-| `OPENAI_API_KEY`                                     | Upload moderation      | platform.openai.com (optional now; uploads are marked unchecked without it) |
+| Variable                                             | Needed for              | Where to get it                                                                                       |
+| ---------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`                                | Links, metadata         | Your domain, e.g. `https://remaxx.ai`                                                                 |
+| `NEXT_PUBLIC_PREVIEW_ORIGIN`                         | Sandboxed previews      | Your second domain, e.g. `https://remaxxusercontent.com`                                              |
+| `NEXT_PUBLIC_SUPABASE_URL`                           | Auth, storage           | Supabase → Project Settings → API Keys                                                                |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`               | Auth in the browser     | Same page (publishable / anon key)                                                                    |
+| `SUPABASE_SECRET_KEY`                                | Storage admin (server)  | Same page (secret / service_role key)                                                                 |
+| `DATABASE_URL`                                       | Everything with data    | Supabase → Connect → connection string                                                                |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits      | Upstash console (optional until launch)                                                               |
+| `OPENAI_API_KEY`                                     | Moderation, vibe search | platform.openai.com (optional; without it uploads are marked unchecked and search matches words only) |
+| `VIBE_DESCRIBE_MODEL`                                | Style descriptions      | Optional; defaults to `gpt-5-mini`                                                                    |
 
 ## Supabase setup (one time)
 
@@ -99,6 +100,15 @@ tests/          unit/ and integration/ (PGlite)
 - Uploads are static sites: HTML, CSS, JS, images, fonts and media, up to 4 MB (Vercel's request limit). Projects that need a build step are asked to upload their build output.
 - Files are stored once per unique content (by SHA-256) in Postgres, so remixes don't copy bytes. Larger files can move to object storage later through `blobs.storage_key`.
 - Previews load from `<preview origin>/v/<version id>/<path>` inside a sandboxed iframe. Only published projects are served there.
+
+## How vibe search works
+
+- Every published project has a row in `project_search`: a plain-language **look and feel** description, the text search matches against (title, description, category, tool, style and topic tags, look and feel), and an embedding of that text (`text-embedding-3-small`, pgvector).
+- Look-and-feel descriptions are hand-written for starter templates (`seed/vibes.ts`). For uploads, `lib/search/hints.ts` reads the CSS/HTML for clues (dark background, frosted glass, hard shadows, serif type...) and a small model turns code + clues into two or three sentences. With no AI key, the clues alone become the description.
+- A search embeds the query (cached, rate-limited, 4-second timeout), gathers candidates by vector similarity and by full-text words, then `lib/search/rank.ts` blends vibe similarity (55%), word coverage (40%) and a small popularity nudge (5%). The same function produces the "why it matched" chips. Everyday words map onto filters: "glassmorphism" counts as Glassy, "admin" as Dashboard.
+- If the AI side is missing, slow or rate-limited, search quietly falls back to words only, and says so.
+- Indexing runs in the background after uploads, approvals and searches, and only does missing work. Admins see the index status and an "Index missing now" button on `/admin`.
+- Tuning: weights and thresholds live at the top of `lib/search/rank.ts`; `tests/unit/search-rank.test.ts` pins the expected top result for real queries over the starter templates.
 
 ## Moderation
 

@@ -51,7 +51,7 @@ export function ExploreControls({ filters }: { filters: ExploreFilters }) {
           name="q"
           type="search"
           defaultValue={filters.q}
-          placeholder="Search titles and tags"
+          placeholder="Describe a vibe: dark glassy dashboard, pastel booking site…"
           className="h-12 md:flex-1"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:flex">
@@ -76,21 +76,26 @@ export function ExploreControls({ filters }: { filters: ExploreFilters }) {
             options={LICENSE_IDS.map((id) => ({ id, label: LICENSES[id].shortName }))}
             onChange={() => apply()}
           />
-          <div className="md:w-36">
-            <label htmlFor="sort" className="sr-only">
-              Sort
-            </label>
-            <Select
-              id="sort"
-              name="sort"
-              defaultValue={filters.sort ?? "new"}
-              onChange={() => apply()}
-              className="h-12"
-            >
-              <option value="new">Newest</option>
-              <option value="popular">Most liked</option>
-            </Select>
-          </div>
+          {/* Search results are ordered by how well they match, so sorting only applies to browsing. */}
+          {filters.q ? (
+            <input type="hidden" name="sort" value={filters.sort ?? "new"} />
+          ) : (
+            <div className="md:w-36">
+              <label htmlFor="sort" className="sr-only">
+                Sort
+              </label>
+              <Select
+                id="sort"
+                name="sort"
+                defaultValue={filters.sort ?? "new"}
+                onChange={() => apply()}
+                className="h-12"
+              >
+                <option value="new">Newest</option>
+                <option value="popular">Most liked</option>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
       <input type="hidden" name="style" value={filters.style ?? ""} />

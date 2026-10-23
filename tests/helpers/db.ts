@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite-pgvector";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "@/lib/db/schema";
 import { runMigrations, type MigrationExecutor } from "@/lib/db/migrate";
@@ -23,7 +24,7 @@ export type TestDb = { pg: PGlite; db: Db; close: () => Promise<void> };
 
 /** A fresh in-process Postgres with every migration applied. */
 export async function createTestDb(): Promise<TestDb> {
-  const pg = new PGlite();
+  const pg = new PGlite({ extensions: { vector } });
   await pg.exec(SUPABASE_STUB);
 
   const executor: MigrationExecutor = {

@@ -5,13 +5,16 @@ import { Suspense } from "react";
 import {
   approveProjectAction,
   dismissReportAction,
+  refreshSearchIndexAction,
   removeProjectAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { canAccessAdmin } from "@/lib/auth/permissions";
 import { getViewer } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
+import { isOpenAiConfigured } from "@/lib/ai/openai";
 import { listOpenReports, listProjectsAwaitingReview } from "@/lib/moderation/actions";
+import { indexStatus } from "@/lib/search/indexer";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 
@@ -47,13 +50,37 @@ async function Queues() {
   const viewer = await getViewer();
   if (!canAccessAdmin(viewer) || !isDbConfigured()) notFound();
   const db = getDb();
-  const [reports, review] = await Promise.all([
+  const [reports, review, index] = await Promise.all([
     listOpenReports(db, viewer),
     listProjectsAwaitingReview(db, viewer),
+    indexStatus(db),
   ]);
+  const aiOn = isOpenAiConfigured();
 
   return (
     <div className="flex flex-col gap-12">
+      <section
+        aria-labelledby="search-heading"
+        className="border-line bg-panel flex flex-col gap-3 rounded-[var(--radius-card)] border p-5 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="search-heading" className="text-xl font-bold">
+            Vibe search index
+          </h2>
+          <p className="text-muted text-sm">
+            {index.indexed} of {index.published} published templates indexed, {index.embedded} with
+            vibe embeddings.
+            {aiOn
+              ? " New uploads are indexed automatically."
+              : " Add OPENAI_API_KEY to turn on vibe matching; search uses words only until then."}
+          </p>
+        </div>
+        <form action={refreshSearchIndexAction}>
+          <Button type="submit" variant="secondary" size="sm">
+            Index missing now
+          </Button>
+        </form>
+      </section>
       <section aria-labelledby="reports-heading" className="flex flex-col gap-4">
         <h2 id="reports-heading" className="text-xl font-bold">
           Open reports <span className="text-muted">({reports.length})</span>
