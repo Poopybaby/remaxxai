@@ -64,7 +64,7 @@ export async function GET() {
       appUrl: siteConfig.appUrl,
       previewOrigin: siteConfig.previewOrigin,
       moderation: env.OPENAI_API_KEY ? "ok" : "off (optional for now)",
-      vibeSearch: env.OPENAI_API_KEY ? "ok" : "words only: add OPENAI_API_KEY to match by vibe",
+      vibeSearch: await checkVibeSearch(),
       rateLimitStore: env.UPSTASH_REDIS_REST_URL ? "ok" : "in-memory (optional for now)",
     },
     { headers: { "Cache-Control": "no-store" } },
