@@ -168,7 +168,14 @@ async function SearchResults({ filters }: { filters: ExploreFilters }) {
       if (!limit.success) {
         notice = "You're searching fast, so these results match your words only for a minute.";
       } else {
-        queryVector = await embedQuery(embedder, q).catch(() => null);
+        queryVector = await embedQuery(embedder, q).catch((err: unknown) => {
+          // Shows up in Vercel → Logs; the page itself just falls back to words.
+          console.error(
+            "[search] query embedding failed:",
+            err instanceof Error ? err.message : err,
+          );
+          return null;
+        });
         if (!queryVector) notice = "Vibe matching is busy, so these results match your words only.";
       }
     }

@@ -9,7 +9,7 @@ export const SEARCH_AI = {
   /** Writes a short style description of an uploaded template from its code. */
   describeModel: process.env.VIBE_DESCRIBE_MODEL?.trim() || "gpt-5-mini",
   /** Per-call timeouts. Search falls back to keyword-only if embedding the query is slow. */
-  embedTimeoutMs: 4000,
+  embedTimeoutMs: 6000,
   describeTimeoutMs: 30000,
   /** How much of a template's HTML/CSS the describer sees. */
   describeMaxChars: 14000,
