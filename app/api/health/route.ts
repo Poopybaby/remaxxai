@@ -82,7 +82,7 @@ async function checkVibeSearch(): Promise<string> {
     const msg = err instanceof Error ? err.message : "unknown error";
     if (/401|invalid_api_key/.test(msg))
       return `OpenAI rejected the key (${msg}): copy it again into OPENAI_API_KEY`;
-    if (/insufficient_quota|billing/.test(msg))
+    if (/insufficient_quota|billing|credit_balance|quota/.test(msg))
       return `OpenAI account has no credit (${msg}): add a balance at platform.openai.com → Billing`;
     if (/429/.test(msg)) return `OpenAI is rate limiting this key (${msg}): try again in a minute`;
     if (/404|model_not_found/.test(msg))
