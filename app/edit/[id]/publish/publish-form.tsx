@@ -179,7 +179,10 @@ export function PublishForm({
               <li key={`${c.slug}-${i}`} className="text-muted">
                 {i === 0 ? "Remixed from " : "which remixed "}
                 {c.available ? (
-                  <Link href={`/p/${c.slug}`} className="text-fg hover:underline">
+                  <Link
+                    href={`/p/${c.slug}`}
+                    className="text-fg decoration-line-strong hover:decoration-fg underline underline-offset-2"
+                  >
                     {c.title}
                   </Link>
                 ) : (

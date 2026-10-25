@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { safeNextPath } from "@/lib/security/hosts";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { isSupabaseConfiguredInBrowser, loadSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Provider = "google" | "github";
 
@@ -36,7 +36,9 @@ export function LoginForm() {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
-  const supabase = getSupabaseBrowserClient();
+  const configured = isSupabaseConfiguredInBrowser();
+  // Starts loading the sign-in SDK as soon as someone shows intent, so it's ready on submit.
+  const warmUp = () => void loadSupabaseBrowserClient().catch(() => {});
 
   function callbackUrl() {
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
@@ -44,13 +46,18 @@ export function LoginForm() {
 
   async function sendLink(e: FormEvent) {
     e.preventDefault();
-    if (!supabase) return;
     setError(null);
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setError("Enter a valid email address.");
       return;
     }
     setStatus("sending");
+    const supabase = await loadSupabaseBrowserClient().catch(() => null);
+    if (!supabase) {
+      setStatus("idle");
+      setError("We couldn't reach the sign-in service. Check your connection and try again.");
+      return;
+    }
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: callbackUrl(), shouldCreateUser: true },
@@ -69,7 +76,6 @@ export function LoginForm() {
 
   async function verifyCode(e: FormEvent) {
     e.preventDefault();
-    if (!supabase) return;
     const token = code.replace(/\s/g, "");
     if (!/^\d{6,10}$/.test(token)) {
       setCodeError("Enter the number code from the email.");
@@ -77,6 +83,12 @@ export function LoginForm() {
     }
     setVerifying(true);
     setCodeError(null);
+    const supabase = await loadSupabaseBrowserClient().catch(() => null);
+    if (!supabase) {
+      setVerifying(false);
+      setCodeError("We couldn't reach the sign-in service. Check your connection and try again.");
+      return;
+    }
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token,
@@ -94,8 +106,12 @@ export function LoginForm() {
   }
 
   async function signInWith(provider: Provider) {
-    if (!supabase) return;
     setError(null);
+    const supabase = await loadSupabaseBrowserClient().catch(() => null);
+    if (!supabase) {
+      setError("We couldn't reach the sign-in service. Check your connection and try again.");
+      return;
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: callbackUrl() },
@@ -103,7 +119,7 @@ export function LoginForm() {
     if (oauthError) setError(CALLBACK_ERRORS.oauth ?? null);
   }
 
-  if (!supabase) {
+  if (!configured) {
     return (
       <p
         role="alert"
@@ -159,7 +175,8 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    // Any sign of intent (pointer over the form, focus inside it) starts loading the sign-in SDK.
+    <div className="flex flex-col gap-6" onPointerEnter={warmUp} onFocusCapture={warmUp}>
       {PROVIDERS.length > 0 ? (
         <>
           <div className="flex flex-col gap-2.5">

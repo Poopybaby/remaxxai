@@ -14,7 +14,11 @@ export function RemixChain() {
         version, which @sol remixed again into a loud gig poster. Each remix credits the original.
       </figcaption>
 
+      {/* On phones this row scrolls sideways; focusable so it can be scrolled with the keyboard. */}
       <div
+        tabIndex={0}
+        role="group"
+        aria-label="Example remixes, scroll sideways"
         className={cn(
           "-mx-4 flex snap-x snap-mandatory [scrollbar-width:none] gap-4 overflow-x-auto px-4 pt-10 pb-4",
           "lg:mx-0 lg:block lg:h-[600px] lg:overflow-visible lg:px-0 lg:pt-0 lg:pb-0",

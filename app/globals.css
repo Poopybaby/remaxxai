@@ -14,7 +14,7 @@
   --color-line-strong: #433d6b;
   --color-fg: #f4f2ff;
   --color-muted: #a9a4c9;
-  --color-faint: #7c779e;
+  --color-faint: #8d88b0; /* 4.7:1 on panel-raised, 5.2:1 on panel (WCAG AA) */
   --color-magenta: #ff3dcb;
   --color-magenta-strong: #ff6ad8;
   --color-cyan: #3de8ff;

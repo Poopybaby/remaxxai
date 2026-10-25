@@ -63,7 +63,7 @@ export function ProjectCard({
         <div className="flex items-center justify-between gap-3 text-sm">
           <Link
             href={`/u/${card.owner.handle}`}
-            className="text-muted hover:text-fg flex min-w-0 items-center gap-2"
+            className="text-muted hover:text-fg flex min-h-6 min-w-0 items-center gap-2"
           >
             <Avatar
               name={card.owner.displayName}
