@@ -17,9 +17,17 @@ export async function generateMetadata({ params }: PageProps<"/u/[handle]">): Pr
   const { handle } = await params;
   const profile = await getPublicProfile(handle);
   if (!profile) return { title: "Profile not found" };
+  const description = profile.bio || `Templates and remixes by @${profile.handle} on REMAXX.`;
   return {
     title: `${profile.displayName} (@${profile.handle})`,
-    description: profile.bio || `Templates and remixes by @${profile.handle} on REMAXX.`,
+    description,
+    alternates: { canonical: `/u/${profile.handle}` },
+    openGraph: {
+      title: `${profile.displayName} on REMAXX`,
+      description,
+      type: "profile",
+      url: `/u/${profile.handle}`,
+    },
   };
 }
 
@@ -131,9 +139,14 @@ async function ProfileContent({ params }: Pick<PageProps<"/u/[handle]">, "params
             { label: stats.likes === 1 ? "Like" : "Likes", value: stats.likes },
             { label: "Times remixed", value: stats.remixed },
           ].map((x) => (
-            <div key={x.label} className="border-line bg-panel rounded-[var(--radius-control)] border px-4 py-3">
+            <div
+              key={x.label}
+              className="border-line bg-panel rounded-[var(--radius-control)] border px-4 py-3"
+            >
               <dt className="text-faint text-xs">{x.label}</dt>
-              <dd className="text-fg text-2xl font-black tabular-nums">{x.value.toLocaleString("en-US")}</dd>
+              <dd className="text-fg text-2xl font-black tabular-nums">
+                {x.value.toLocaleString("en-US")}
+              </dd>
             </div>
           ))}
         </dl>

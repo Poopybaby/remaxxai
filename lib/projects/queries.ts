@@ -416,3 +416,30 @@ export async function listDrafts(
     .limit(100);
   return rows.map((r) => ({ ...toCard(r), updatedAt: r.updatedAt, parentTitle: r.parentTitle }));
 }
+
+/** Public pages for the sitemap: published projects and the creators who have them. */
+export async function listSitemapEntries(
+  db: Db,
+  limit = 5000,
+): Promise<{
+  projects: { slug: string; updatedAt: Date }[];
+  creators: { handle: string; updatedAt: Date }[];
+}> {
+  const rows = await db
+    .select({ slug: projects.slug, updatedAt: projects.updatedAt })
+    .from(projects)
+    .where(eq(projects.status, "published"))
+    .orderBy(desc(projects.updatedAt))
+    .limit(limit);
+  const creators = await db
+    .select({ handle: profiles.handle, updatedAt: sql<Date>`max(${projects.updatedAt})` })
+    .from(projects)
+    .innerJoin(profiles, eq(profiles.id, projects.ownerId))
+    .where(eq(projects.status, "published"))
+    .groupBy(profiles.handle)
+    .limit(limit);
+  return {
+    projects: rows,
+    creators: creators.map((c) => ({ handle: c.handle, updatedAt: new Date(c.updatedAt) })),
+  };
+}

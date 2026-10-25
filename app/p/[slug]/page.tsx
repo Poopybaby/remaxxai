@@ -38,12 +38,21 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
   if (!isDbConfigured()) return { title: "Project" };
   const p = await getProjectBySlug(getDb(), slug);
   if (!p || p.status !== "published") return { title: "Project", robots: { index: false } };
+  const description =
+    p.description.slice(0, 200) ||
+    `A ${labelFor(CATEGORIES, p.category).toLowerCase()} you can remix on REMAXX.`;
+  // The share image comes from ./opengraph-image.tsx.
   return {
     title: `${p.title} by @${p.owner.handle}`,
-    description:
-      p.description ||
-      `A ${labelFor(CATEGORIES, p.category).toLowerCase()} you can remix on REMAXX.`,
-    openGraph: { title: p.title, images: p.coverUrl ? [{ url: p.coverUrl }] : undefined },
+    description,
+    alternates: { canonical: `/p/${p.slug}` },
+    openGraph: {
+      title: `${p.title} by @${p.owner.handle}`,
+      description,
+      type: "article",
+      url: `/p/${p.slug}`,
+    },
+    twitter: { card: "summary_large_image", title: p.title, description },
   };
 }
 
@@ -91,9 +100,31 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
   const license = LICENSES[project.license.id];
   const styles = project.tags.filter((t) => t.kind === "style");
   const topics = project.tags.filter((t) => t.kind === "topic");
+  // Structured data for search engines. "<" is escaped so no title can close the script tag.
+  const jsonLd = published
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        name: project.title,
+        description: project.description || undefined,
+        url: `${siteConfig.appUrl}/p/${project.slug}`,
+        datePublished: project.publishedAt?.toISOString(),
+        author: {
+          "@type": "Person",
+          name: project.owner.displayName,
+          url: `${siteConfig.appUrl}/u/${project.owner.handle}`,
+        },
+        license: license.url,
+        keywords: project.tags.map((t) => t.slug).join(", ") || undefined,
+        isBasedOn: credits[0]?.available ? `${siteConfig.appUrl}/p/${credits[0].slug}` : undefined,
+      }).replace(/</g, "\\u003c")
+    : null;
 
   return (
     <article className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:py-10">
+      {jsonLd ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      ) : null}
       {!published ? (
         <div
           role="status"
