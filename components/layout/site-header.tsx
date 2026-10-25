@@ -50,9 +50,14 @@ async function HeaderAccount() {
   const viewer = await getViewerContext();
   if (viewer.status === "anonymous") {
     return (
-      <ButtonLink href="/login" variant="secondary" size="sm">
-        Sign in
-      </ButtonLink>
+      <>
+        <ButtonLink href="/login" variant="ghost" size="sm">
+          Sign in
+        </ButtonLink>
+        <ButtonLink href="/signup" size="sm">
+          Sign up
+        </ButtonLink>
+      </>
     );
   }
   if (viewer.status === "needs_onboarding") {

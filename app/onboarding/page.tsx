@@ -13,6 +13,9 @@ export default function OnboardingPage({ searchParams }: PageProps<"/onboarding"
   return (
     <section className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 py-14">
       <div className="flex flex-col gap-3">
+        <p className="text-magenta text-sm font-bold tracking-wide uppercase">
+          Step 2 of 3 · You&apos;re verified
+        </p>
         <h1 className="type-wide text-4xl font-black">Set up your profile</h1>
         <p className="text-muted">
           This is how people will find and credit your work. You can change your display name later;
