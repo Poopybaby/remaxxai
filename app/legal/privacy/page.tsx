@@ -45,8 +45,21 @@ export default function PrivacyPage() {
       <h2>Service providers</h2>
       <p>
         We use providers to run REMAXX, including hosting (Vercel), database, sign-in and file
-        storage (Supabase), rate limiting (Upstash), email (Resend), payments (Stripe), and error
-        monitoring and analytics. They process data on our behalf.
+        storage (Supabase), rate limiting (Upstash), email (Resend), payments (Stripe), error
+        monitoring (Sentry) and product analytics (PostHog). They process data on our behalf.
+      </p>
+
+      <h2>Error reports and analytics</h2>
+      <p>
+        If something breaks, an error report goes to Sentry: what failed, the page address, and your
+        browser type. Reports never include your cookies, passwords, prompts, uploaded files, email
+        address, or IP address, and we remove sign-in codes and search text from page addresses.
+      </p>
+      <p>
+        To learn how REMAXX is used, we count page views and a few actions (such as starting a
+        remix, publishing, or picking a plan) with PostHog. These counts don&apos;t include what you
+        type, aren&apos;t tied to your account or email, and store nothing on your device, so no
+        tracking cookies are used. If your browser sends Do Not Track, we don&apos;t count anything.
       </p>
 
       <h2>What we don&apos;t do</h2>

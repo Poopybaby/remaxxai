@@ -18,6 +18,7 @@ import {
 } from "./chat-panel";
 import { ExplainDrawer, HistoryDrawer } from "./drawers";
 import { FileTree } from "./file-tree";
+import { track } from "@/lib/monitoring/analytics";
 
 export type EditorData = {
   project: { id: string; title: string; slug: string; entryPath: string; license: string };
@@ -216,6 +217,7 @@ export function Editor({ data }: { data: EditorData }) {
   async function ask(prompt: string, modelId: string, images: { base64: string }[]) {
     setBusy("ai");
     setProposal(null);
+    track("ai_prompt_sent", { kind: "edit", model: modelId, images: images.length });
     setChat((c) => [
       ...c,
       { id: crypto.randomUUID(), role: "user", text: prompt, status: "ok", images: images.length },
@@ -280,6 +282,7 @@ export function Editor({ data }: { data: EditorData }) {
     const id = await save(next, proposal.summary, "ai", proposal.replyId);
     if (!id) return;
     const count = proposal.include.size;
+    track("ai_change_applied", { files: count });
     setChat((c) => [
       ...c,
       {

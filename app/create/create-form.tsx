@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/field";
 import { firstPromptKey } from "@/lib/editor/first-prompt";
 import { STARTER_ORDER, STARTERS, type StarterId } from "@/lib/projects/starters";
 import { cn } from "@/lib/utils/cn";
+import { track } from "@/lib/monitoring/analytics";
 
 const IDEAS = [
   "A booking page for a barbershop with prices and opening hours",
@@ -46,6 +47,7 @@ export function CreateForm({ aiAllowed }: { aiAllowed: boolean }) {
         setBusy(false);
         return;
       }
+      track("project_created", { starter });
       if (aiAllowed && idea.trim()) {
         try {
           sessionStorage.setItem(firstPromptKey(json.id), idea.trim());

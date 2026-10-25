@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { PlanId } from "@/config/plans";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { track } from "@/lib/monitoring/analytics";
 
 export function PlanButton({
   planId,
@@ -68,6 +69,7 @@ export function PlanButton({
         setBusy(false);
         return;
       }
+      track("checkout_started", { plan: planId });
       if (json.kind === "redirect" && json.url) {
         // Stripe's hosted checkout page.
         window.location.assign(json.url);

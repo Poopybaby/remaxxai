@@ -11,6 +11,7 @@ import { CheckboxField, Field, Input, Textarea } from "@/components/ui/field";
 import { Chip, Select } from "@/components/ui/select";
 import { compressCover } from "@/lib/upload/client-read";
 import { cn } from "@/lib/utils/cn";
+import { track } from "@/lib/monitoring/analytics";
 
 type Props = {
   projectId: string;
@@ -122,6 +123,11 @@ export function PublishForm({
         setFormError(json.error ?? "Publishing didn't work. Try again.");
         return;
       }
+      track("published", {
+        remix: isRemix,
+        license,
+        held: json.status === "pending_review",
+      });
       if (json.status === "pending_review") {
         setHeld(json.slug);
         return;

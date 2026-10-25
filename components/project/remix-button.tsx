@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { remixAction, type RemixState } from "@/app/actions/editor";
 import { buttonClasses } from "@/components/ui/button";
+import { track } from "@/lib/monitoring/analytics";
 
 /** Makes a private draft copy of the project and opens it in the editor. */
 export function RemixButton({
@@ -29,7 +30,11 @@ export function RemixButton({
     );
   }
   return (
-    <form action={action} className="flex flex-col items-end gap-1">
+    <form
+      action={action}
+      onSubmit={() => track("remix_started", {})}
+      className="flex flex-col items-end gap-1"
+    >
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="returnTo" value={`/p/${slug}`} />
       <button type="submit" disabled={pending} className={buttonClasses("primary")}>

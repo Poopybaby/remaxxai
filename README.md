@@ -29,24 +29,26 @@ The app starts without any keys: the landing page and legal pages work, sign-in 
 
 Everything is listed with instructions in [.env.example](./.env.example). Only `NEXT_PUBLIC_*` values reach the browser. AI and payment keys are server-only and CI fails the build if one shows up in the client bundle.
 
-| Variable                                             | Needed for              | Where to get it                                                                                       |
-| ---------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`                                | Links, metadata         | Your domain, e.g. `https://remaxx.ai`                                                                 |
-| `NEXT_PUBLIC_PREVIEW_ORIGIN`                         | Sandboxed previews      | Your second domain, e.g. `https://remaxxusercontent.com`                                              |
-| `NEXT_PUBLIC_SUPABASE_URL`                           | Auth, storage           | Supabase → Project Settings → API Keys                                                                |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`               | Auth in the browser     | Same page (publishable / anon key)                                                                    |
-| `SUPABASE_SECRET_KEY`                                | Storage admin (server)  | Same page (secret / service_role key)                                                                 |
-| `DATABASE_URL`                                       | Everything with data    | Supabase → Connect → connection string                                                                |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits      | Upstash console (optional until launch)                                                               |
-| `OPENAI_API_KEY`                                     | Moderation, vibe search | platform.openai.com (optional; without it uploads are marked unchecked and search matches words only) |
-| `ANTHROPIC_API_KEY`                                  | Claude in the editor    | console.anthropic.com → API Keys (optional; Claude models show "not set up" without it)               |
-| `GOOGLE_GENERATIVE_AI_API_KEY`                       | Gemini in the editor    | aistudio.google.com → Get API key (optional)                                                          |
-| `DEEPSEEK_API_KEY`                                   | DeepSeek in the editor  | platform.deepseek.com → API keys (optional)                                                           |
-| `AI_ACCESS`                                          | Who can use AI features | `admins` (default) or `signed-in`. Plans are only sold to people who can use AI                       |
-| `STRIPE_SECRET_KEY`                                  | Selling plans           | Stripe → Developers → API keys. Test key (`sk_test_...`) until launch                                 |
-| `STRIPE_WEBHOOK_SECRET`                              | Credits after payment   | Stripe → Developers → Webhooks → endpoint → Signing secret (`whsec_...`)                              |
-| `STRIPE_ALLOW_LIVE`                                  | Real charges            | Leave unset. Live keys are refused unless this is `true`                                              |
-| `VIBE_DESCRIBE_MODEL`                                | Style descriptions      | Optional; defaults to `gpt-5-mini`                                                                    |
+| Variable                                              | Needed for                   | Where to get it                                                                                       |
+| ----------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`                                 | Links, metadata              | Your domain, e.g. `https://remaxx.ai`                                                                 |
+| `NEXT_PUBLIC_PREVIEW_ORIGIN`                          | Sandboxed previews           | Your second domain, e.g. `https://remaxxusercontent.com`                                              |
+| `NEXT_PUBLIC_SUPABASE_URL`                            | Auth, storage                | Supabase → Project Settings → API Keys                                                                |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                | Auth in the browser          | Same page (publishable / anon key)                                                                    |
+| `SUPABASE_SECRET_KEY`                                 | Storage admin (server)       | Same page (secret / service_role key)                                                                 |
+| `DATABASE_URL`                                        | Everything with data         | Supabase → Connect → connection string                                                                |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`  | Shared rate limits           | Upstash console (optional until launch)                                                               |
+| `OPENAI_API_KEY`                                      | Moderation, vibe search      | platform.openai.com (optional; without it uploads are marked unchecked and search matches words only) |
+| `ANTHROPIC_API_KEY`                                   | Claude in the editor         | console.anthropic.com → API Keys (optional; Claude models show "not set up" without it)               |
+| `GOOGLE_GENERATIVE_AI_API_KEY`                        | Gemini in the editor         | aistudio.google.com → Get API key (optional)                                                          |
+| `DEEPSEEK_API_KEY`                                    | DeepSeek in the editor       | platform.deepseek.com → API keys (optional)                                                           |
+| `AI_ACCESS`                                           | Who can use AI features      | `admins` (default) or `signed-in`. Plans are only sold to people who can use AI                       |
+| `STRIPE_SECRET_KEY`                                   | Selling plans                | Stripe → Developers → API keys. Test key (`sk_test_...`) until launch                                 |
+| `STRIPE_WEBHOOK_SECRET`                               | Credits after payment        | Stripe → Developers → Webhooks → endpoint → Signing secret (`whsec_...`)                              |
+| `STRIPE_ALLOW_LIVE`                                   | Real charges                 | Leave unset. Live keys are refused unless this is `true`                                              |
+| `NEXT_PUBLIC_SENTRY_DSN`                              | Error reports (optional)     | sentry.io → Project → Settings → Client Keys (DSN). Off when unset                                    |
+| `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` | Product analytics (optional) | posthog.com → Project settings → Project API key. Off when unset                                      |
+| `VIBE_DESCRIBE_MODEL`                                 | Style descriptions           | Optional; defaults to `gpt-5-mini`                                                                    |
 
 ## Supabase setup (one time)
 
@@ -153,6 +155,12 @@ tests/          unit/ and integration/ (PGlite)
 5. Products, prices and the customer billing page (cancel, change card, invoices) are created automatically on first use.
 
 Going live later means a live key plus `STRIPE_ALLOW_LIVE=true`, a live-mode webhook, and `AI_ACCESS=signed-in`. Don't do it before the Terms and Privacy pages have had a lawyer's review.
+
+## Monitoring and analytics
+
+- Both are optional and off until their key is set; the SDKs load lazily after the page is interactive, so they never slow the first load.
+- **Sentry** (`instrumentation.ts`, `instrumentation-client.ts`): server errors through Next's `onRequestError`, browser errors through the SDK. Collection is locked down (`sentryDataCollection()` in `lib/monitoring/scrub.ts`: no cookies, bodies, AI prompts, database values or stack-frame variables), and every report also passes `scrubSentryEvent`. No session replays. Source maps aren't uploaded yet; add `withSentryConfig` and a `SENTRY_AUTH_TOKEN` when readable stack traces are worth it.
+- **PostHog** (`lib/monitoring/analytics.ts`): page views plus six events (`project_created`, `remix_started`, `ai_prompt_sent`, `ai_change_applied`, `published`, `checkout_started`). Memory-only persistence (no cookies, no consent banner needed), no person profiles, no recordings, Do Not Track respected, URLs scrubbed. Events never carry typed text. Add one by extending `AnalyticsEvent` and calling `track()`.
 
 ## How to add an AI model
 
