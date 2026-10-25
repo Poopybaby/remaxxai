@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { suggestHandle } from "@/lib/auth/handles";
 import { getViewerContext } from "@/lib/auth/viewer";
 import { safeNextPath } from "@/lib/security/hosts";
+import { DEFAULT_AVATARS, randomDefaultAvatarUrl } from "@/config/avatars";
 import { OnboardingForm } from "./onboarding-form";
 
 export const metadata: Metadata = { title: "Set up your profile", robots: { index: false } };
@@ -41,6 +42,9 @@ async function OnboardingGate({ searchParams }: Pick<PageProps<"/onboarding">, "
       next={next}
       suggestedName={ctx.suggestedName ?? ""}
       suggestedHandle={suggestHandle(ctx.suggestedName ?? ctx.email ?? "") ?? ""}
+      suggestedAvatar={
+        DEFAULT_AVATARS.find((a) => a.url === randomDefaultAvatarUrl())?.id ?? "sprinkles"
+      }
     />
   );
 }

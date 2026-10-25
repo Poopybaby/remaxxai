@@ -68,6 +68,7 @@ describe("first-time setup SQL", () => {
       "0004_editor.sql",
       "0005_credits.sql",
       "0006_notifications.sql",
+      "0007_avatars.sql",
     ]);
 
     // Old table kept under a new name; tasks still works with its own set_updated_at.
@@ -90,7 +91,7 @@ describe("first-time setup SQL", () => {
     const db = await freshDb(STARTER_TEMPLATE);
     // Phase 2's setup: the same script, minus the newer migrations.
     const phase2 = (await buildSetupSql()).replace(
-      /-- 0003_vibe_search\.sql[\s\S]*?-- 0006_notifications\.sql[\s\S]*?\$setup\$;\n/,
+      /-- 0003_vibe_search\.sql[\s\S]*?-- 0007_avatars\.sql[\s\S]*?\$setup\$;\n/,
       "",
     );
     expect(phase2).not.toContain("create table project_search");
@@ -112,7 +113,7 @@ describe("first-time setup SQL", () => {
   it("upgrades a Phase 4 project: everyone who already signed up gets their free prompts", async () => {
     const db = await freshDb(STARTER_TEMPLATE);
     const phase4 = (await buildSetupSql()).replace(
-      /-- 0005_credits\.sql[\s\S]*?-- 0006_notifications\.sql[\s\S]*?\$setup\$;\n/,
+      /-- 0005_credits\.sql[\s\S]*?-- 0007_avatars\.sql[\s\S]*?\$setup\$;\n/,
       "",
     );
     expect(phase4).not.toContain("create table credit_ledger");
@@ -132,6 +133,21 @@ describe("first-time setup SQL", () => {
       "insert into credit_ledger (user_id, delta, kind, idempotency_key) select id, 5, 'admin_adjust', 'k1' from profiles limit 1",
     );
     await expect(db.exec("update credit_ledger set delta = 500")).rejects.toThrow(/append-only/);
+  });
+
+  it("gives existing accounts without a picture one of the crew", async () => {
+    const db = await freshDb(STARTER_TEMPLATE);
+    const before = (await buildSetupSql()).replace(/-- 0007_avatars\.sql[\s\S]*?\$setup\$;\n/, "");
+    expect(before).not.toContain("profiles_avatar_url_check check");
+    await db.exec(before);
+    await db.exec(await buildSeedSql());
+    await db.exec("update profiles set avatar_url = null");
+
+    await db.exec(await buildSetupSql());
+    const rows = await db.query<{ a: string | null }>("select avatar_url as a from profiles");
+    expect(rows.rows.length).toBeGreaterThan(0);
+    for (const r of rows.rows)
+      expect(r.a).toMatch(/^\/avatars\/(sprinkles|patch|plume|snooze)\.webp$/);
   });
 
   it("works on a brand-new project", async () => {

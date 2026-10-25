@@ -55,3 +55,36 @@ export async function compressCover(file: File): Promise<Blob> {
   );
   return blob && blob.type === "image/webp" && blob.size < file.size ? blob : file;
 }
+
+/**
+ * Turns a picked image into a square profile picture: center crop, 512×512, WebP (JPEG if the
+ * browser can't encode WebP). Also strips any embedded metadata, such as photo location.
+ */
+export async function squareAvatar(file: File, size = 512): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  canvas
+    .getContext("2d")
+    ?.drawImage(
+      bitmap,
+      (bitmap.width - side) / 2,
+      (bitmap.height - side) / 2,
+      side,
+      side,
+      0,
+      0,
+      size,
+      size,
+    );
+  bitmap.close();
+  const encode = (type: string) =>
+    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
+  const webp = await encode("image/webp");
+  if (webp && webp.type === "image/webp") return webp;
+  const jpeg = await encode("image/jpeg");
+  if (!jpeg) throw new Error("This browser couldn't read that image.");
+  return jpeg;
+}

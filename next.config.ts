@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/media/**", search: "" },
       { pathname: "/seed/**", search: "" },
+      { pathname: "/avatars/**", search: "" },
     ],
     remotePatterns: [
       // OAuth provider avatars (Google, GitHub) and Supabase Storage public buckets.

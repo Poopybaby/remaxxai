@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { AvatarPicker } from "@/components/profile/avatar-picker";
 import { getViewerContext } from "@/lib/auth/viewer";
 import { ProfileSettingsForm } from "./profile-settings-form";
 
@@ -39,6 +40,13 @@ async function SettingsContent() {
           </Link>
         </p>
       </div>
+      <section aria-labelledby="picture-heading" className="flex flex-col gap-4">
+        <h2 id="picture-heading" className="text-lg font-bold">
+          Profile picture
+        </h2>
+        <AvatarPicker current={profile.avatarUrl} />
+      </section>
+      <h2 className="border-line border-t pt-6 text-lg font-bold">Profile details</h2>
       <ProfileSettingsForm
         displayName={profile.displayName}
         bio={profile.bio}

@@ -2,7 +2,9 @@
 
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { defaultAvatar } from "@/config/avatars";
 import { RATE_LIMITS } from "@/config/limits";
+import { AvatarError, chooseDefaultAvatar } from "@/lib/avatars";
 import { getViewer, getViewerContext } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { createProfile, updateProfile, type FieldErrors } from "@/lib/profiles";
@@ -30,12 +32,19 @@ export async function createProfileAction(
     displayName: String(formData.get("displayName") ?? ""),
     ageConfirmed: (formData.get("ageConfirmed") === "on") as true,
     termsAccepted: (formData.get("termsAccepted") === "on") as true,
-    avatarUrl: ctx.avatarUrl?.startsWith("https://") ? ctx.avatarUrl : null,
+    // One of the crew (picked in the form, else at random). People can upload their own later.
+    avatarUrl: defaultAvatar(String(formData.get("avatar") ?? ""))?.url ?? null,
   });
   if (!result.ok) {
     return {
       errors: result.errors,
-      values: pickValues(formData, ["handle", "displayName", "ageConfirmed", "termsAccepted"]),
+      values: pickValues(formData, [
+        "handle",
+        "displayName",
+        "ageConfirmed",
+        "termsAccepted",
+        "avatar",
+      ]),
     };
   }
 
@@ -69,4 +78,30 @@ export async function updateProfileAction(
 
   updateTag(`profile:${result.value.handle}`);
   return { errors: {}, saved: true, values };
+}
+
+export type AvatarState = { error: string | null; url: string | null };
+
+/** Switches the profile picture to one of the REMAXX crew. */
+export async function chooseAvatarAction(
+  _prev: AvatarState,
+  formData: FormData,
+): Promise<AvatarState> {
+  const viewer = await getViewer();
+  if (!viewer) redirect("/login?next=/settings");
+  if (!isDbConfigured())
+    return { error: "Accounts aren't set up on this deployment yet.", url: null };
+  if (!(await rateLimit("profile-update", viewer.userId, RATE_LIMITS.profileUpdate)).success) {
+    return { error: "You're changing this too often. Wait a few minutes.", url: null };
+  }
+  const id = String(formData.get("avatar") ?? "");
+  try {
+    const handle = await chooseDefaultAvatar(getDb(), viewer, id);
+    updateTag(`profile:${handle}`);
+    refresh();
+    return { error: null, url: defaultAvatar(id)?.url ?? null };
+  } catch (err) {
+    if (err instanceof AvatarError) return { error: err.message, url: null };
+    throw err;
+  }
 }

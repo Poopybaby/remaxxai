@@ -3,6 +3,7 @@
  */
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { AVATAR_URL_PATTERN, randomDefaultAvatarUrl } from "@/config/avatars";
 import { LEGAL_VERSIONS } from "@/config/legal";
 import { HANDLE_ERROR_MESSAGES, validateHandle } from "@/lib/auth/handles";
 import { canEditProfile, type Viewer } from "@/lib/auth/permissions";
@@ -34,11 +35,8 @@ const createInput = z.object({
   termsAccepted: z.literal(true, {
     message: "You need to accept the Terms and Acceptable Use Policy.",
   }),
-  avatarUrl: z
-    .string()
-    .regex(/^https:\/\//)
-    .nullable()
-    .optional(),
+  /** A built-in avatar, an uploaded one, or an https URL. Omitted: one of the crew at random. */
+  avatarUrl: z.string().regex(AVATAR_URL_PATTERN).nullable().optional(),
 });
 
 export type CreateProfileInput = z.input<typeof createInput>;
@@ -74,7 +72,7 @@ export async function createProfile(
           id: userId,
           handle: handle.handle,
           displayName: parsed.data.displayName,
-          avatarUrl: parsed.data.avatarUrl ?? null,
+          avatarUrl: parsed.data.avatarUrl ?? randomDefaultAvatarUrl(),
           ageConfirmedAt: now,
         })
         .returning();
