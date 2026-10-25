@@ -8,6 +8,7 @@ import {
   normalizeInvoice,
   normalizeSubscription,
   planFromPrice,
+  syncFromStripe,
   type NormalizedSubscription,
 } from "@/lib/billing/webhook";
 import { applyEntries } from "@/lib/billing/credits";
@@ -230,6 +231,87 @@ describe("handleStripeEvent", () => {
         .from(subscriptions)
         .where(eq(subscriptions.stripeCustomerId, "cus_nobody")),
     ).toEqual([]);
+  });
+});
+
+describe("syncFromStripe (fallback when a webhook is missed)", () => {
+  const paid = (id: string, cus: string, sub: string, reason = "subscription_create") => ({
+    ...normalizeInvoice(invoice(id, cus, sub, reason))!,
+    paid: true,
+  });
+
+  it("grants a paid plan's credits once, however often it runs, and agrees with the webhook", async () => {
+    const user = await newUser();
+    const cus = `cus_s${user.slice(0, 6)}`;
+    await t.db
+      .insert(subscriptions)
+      .values({ userId: user, stripeCustomerId: cus, status: "none" });
+    expect((await getEntitlement(t.db, user)).plan).toBeNull();
+
+    const sub = normalizeSubscription(
+      stripeSub({ id: `sub_s${user.slice(0, 6)}`, customer: cus, user, plan: "power" }),
+    )!;
+    const deps = {
+      listSubscriptions: async () => [{ sub, latestInvoice: paid("in_s1", cus, sub.id) }],
+    };
+    expect(await syncFromStripe(t.db, user, deps)).toBe("synced");
+    expect(await syncFromStripe(t.db, user, deps)).toBe("synced");
+    expect(await balanceOf(user)).toBe(5500);
+    expect((await getEntitlement(t.db, user)).plan?.id).toBe("power");
+
+    // The webhook for the same invoice arrives late: nothing is granted twice.
+    await handleStripeEvent(
+      t.db,
+      {
+        id: "evt_late",
+        type: "invoice.paid",
+        data: { object: invoice("in_s1", cus, sub.id, "subscription_create") },
+      },
+      { retrieveSubscription: async () => sub },
+    );
+    expect(await balanceOf(user)).toBe(5500);
+  });
+
+  it("does nothing for an unpaid invoice or someone who never started checkout", async () => {
+    const user = await newUser();
+    expect(await syncFromStripe(t.db, user, { listSubscriptions: async () => [] })).toBe(
+      "no_customer",
+    );
+    const cus = `cus_u${user.slice(0, 6)}`;
+    await t.db
+      .insert(subscriptions)
+      .values({ userId: user, stripeCustomerId: cus, status: "none" });
+    const sub = normalizeSubscription(
+      stripeSub({
+        id: `sub_u${user.slice(0, 6)}`,
+        customer: cus,
+        user,
+        plan: "pro",
+        status: "incomplete",
+      }),
+    )!;
+    await syncFromStripe(t.db, user, {
+      listSubscriptions: async () => [
+        { sub, latestInvoice: { ...paid("in_u1", cus, sub.id), paid: false } },
+      ],
+    });
+    expect(await balanceOf(user)).toBe(0);
+    expect((await getEntitlement(t.db, user)).plan).toBeNull();
+  });
+
+  it("only ever applies to the person asking, whatever Stripe's metadata says", async () => {
+    const me = await newUser();
+    const other = await newUser();
+    const cus = `cus_m${me.slice(0, 6)}`;
+    await t.db.insert(subscriptions).values({ userId: me, stripeCustomerId: cus, status: "none" });
+    const sub = normalizeSubscription(
+      stripeSub({ id: `sub_m${me.slice(0, 6)}`, customer: cus, user: other, plan: "starter" }),
+    )!;
+    await syncFromStripe(t.db, me, {
+      listSubscriptions: async () => [{ sub, latestInvoice: paid("in_m1", cus, sub.id) }],
+    });
+    expect(await balanceOf(me)).toBe(600);
+    expect(await balanceOf(other)).toBe(0);
   });
 });
 

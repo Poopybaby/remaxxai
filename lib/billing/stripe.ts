@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { PLANS, priceLookupKey, type Plan, type PlanId } from "@/config/plans";
 import { subscriptions } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
+import { normalizeInvoice, normalizeSubscription, type SyncDeps } from "./webhook";
 import { serverEnv } from "@/lib/env";
 
 /**
@@ -180,4 +181,32 @@ export function verifyWebhook(
 ): Stripe.Event {
   if (!signature) throw new Error("Missing Stripe-Signature header");
   return Stripe.webhooks.constructEvent(body, signature, secret);
+}
+
+/** The customer's subscriptions straight from Stripe (newest first), for the sync fallback. */
+export async function listCustomerSubscriptions(
+  customerId: string,
+): Promise<Awaited<ReturnType<SyncDeps["listSubscriptions"]>>> {
+  const stripe = getStripe();
+  const res = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 5,
+    expand: ["data.latest_invoice"],
+  });
+  const out = [];
+  for (const raw of res.data) {
+    const sub = normalizeSubscription(raw);
+    if (!sub) continue;
+    const invRaw = raw.latest_invoice;
+    const inv = invRaw && typeof invRaw === "object" ? normalizeInvoice(invRaw) : null;
+    out.push({
+      sub,
+      latestInvoice:
+        inv && typeof invRaw === "object" && invRaw
+          ? { ...inv, subscriptionId: inv.subscriptionId ?? sub.id, paid: invRaw.status === "paid" }
+          : null,
+    });
+  }
+  return out;
 }

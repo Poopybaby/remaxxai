@@ -8,8 +8,11 @@ import { getEntitlement, recentLedger } from "@/lib/billing/credits";
 import { salesState } from "@/lib/billing/sales";
 import { getViewerContext } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
+import { subscriptions } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { cn } from "@/lib/utils/cn";
 import { ManageBillingButton } from "./manage-button";
+import { SyncFromStripe } from "./sync-button";
 
 export const metadata: Metadata = { title: "Billing and credits", robots: { index: false } };
 
@@ -60,15 +63,20 @@ async function Billing({ searchParams }: Pick<PageProps<"/billing">, "searchPara
   if (!isDbConfigured()) redirect("/");
   const checkout = (await searchParams).checkout;
   const db = getDb();
-  const [ent, ledger] = await Promise.all([
+  const [ent, ledger, [customer]] = await Promise.all([
     getEntitlement(db, ctx.userId),
     recentLedger(db, ctx.userId, 30),
+    db
+      .select({ id: subscriptions.stripeCustomerId })
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, ctx.userId)),
   ]);
+  const returning = checkout === "success" || checkout === "changed";
   const sales = salesState({ userId: ctx.userId, role: ctx.profile.role });
 
   return (
     <div className="flex flex-col gap-8">
-      {checkout === "success" || checkout === "changed" ? (
+      {returning ? (
         <p
           role="status"
           className="border-success/40 bg-success/10 rounded-[var(--radius-control)] border px-4 py-3 text-sm"
@@ -77,7 +85,9 @@ async function Billing({ searchParams }: Pick<PageProps<"/billing">, "searchPara
             {checkout === "success" ? "Thanks, you're subscribed." : "Your plan was changed."}
           </strong>{" "}
           <span className="text-muted">
-            Credits usually arrive within a few seconds. Refresh if they aren&apos;t here yet.
+            {ent.plan
+              ? "Your credits are below."
+              : "Confirming your payment with Stripe. Credits appear here in a few seconds."}
           </span>
         </p>
       ) : null}
@@ -108,6 +118,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/billing">, "searchPara
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {ent.plan || ent.status === "past_due" ? <ManageBillingButton /> : null}
+            {customer ? <SyncFromStripe auto={returning} /> : null}
             <ButtonLink href="/pricing" size="sm" variant={ent.plan ? "ghost" : "primary"}>
               {ent.plan ? "Change plan" : sales.open ? "See plans" : "See plans (opening soon)"}
             </ButtonLink>

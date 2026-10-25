@@ -116,6 +116,54 @@ async function saveSubscription(db: Db, sub: NormalizedSubscription): Promise<st
   return userId;
 }
 
+/** A subscription that has ended takes its unused credits with it. */
+async function endSubscription(db: Db, userId: string, sub: NormalizedSubscription) {
+  await expireAllCredits(db, userId, `ended:${sub.id}`);
+  await db
+    .update(subscriptions)
+    .set({ creditedPlanId: null })
+    .where(eq(subscriptions.userId, userId));
+}
+
+/**
+ * Grants credits for a paid invoice. Keyed by the invoice id, so the webhook and the sync
+ * fallback can both call it for the same invoice and credits arrive exactly once.
+ */
+export async function applyPaidInvoice(
+  db: Db,
+  inv: NormalizedInvoice,
+  sub: NormalizedSubscription,
+): Promise<void> {
+  if (!sub.planId) return;
+  const userId = await saveSubscription(db, sub);
+  if (!userId) return;
+  const plan = PLANS[sub.planId];
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+  const credited = row?.creditedPlanId;
+  if (inv.billingReason === "subscription_update" && isPlanId(credited)) {
+    // Mid-period plan change: top up the difference on upgrades; downgrades apply next period.
+    await grantUpgradeDifference(db, {
+      userId,
+      from: PLANS[credited],
+      to: plan,
+      invoiceId: inv.id,
+    });
+    if (plan.monthlyCredits > PLANS[credited].monthlyCredits) {
+      await db
+        .update(subscriptions)
+        .set({ creditedPlanId: plan.id })
+        .where(eq(subscriptions.userId, userId));
+    }
+  } else {
+    // New subscription or renewal: last period's credits expire, this period's are granted.
+    await startBillingPeriod(db, { userId, plan, invoiceId: inv.id });
+    await db
+      .update(subscriptions)
+      .set({ creditedPlanId: plan.id })
+      .where(eq(subscriptions.userId, userId));
+  }
+}
+
 export type HandleResult = "processed" | "duplicate" | "ignored";
 
 export async function handleStripeEvent(
@@ -141,13 +189,8 @@ export async function handleStripeEvent(
       const sub = normalizeSubscription(o);
       if (!sub) break;
       const userId = await saveSubscription(db, sub);
-      // A plan that has ended takes its unused credits with it.
       if (userId && (event.type === "customer.subscription.deleted" || sub.status === "canceled")) {
-        await expireAllCredits(db, userId, `ended:${sub.id}`);
-        await db
-          .update(subscriptions)
-          .set({ creditedPlanId: null })
-          .where(eq(subscriptions.userId, userId));
+        await endSubscription(db, userId, sub);
       }
       break;
     }
@@ -155,34 +198,7 @@ export async function handleStripeEvent(
       const inv = normalizeInvoice(o);
       if (!inv?.subscriptionId) break;
       const sub = await deps.retrieveSubscription(inv.subscriptionId);
-      if (!sub?.planId) break;
-      const userId = await saveSubscription(db, sub);
-      if (!userId) break;
-      const plan = PLANS[sub.planId];
-      const [row] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
-      const credited = row?.creditedPlanId;
-      if (inv.billingReason === "subscription_update" && isPlanId(credited)) {
-        // Mid-period plan change: top up the difference on upgrades; downgrades apply next period.
-        await grantUpgradeDifference(db, {
-          userId,
-          from: PLANS[credited],
-          to: plan,
-          invoiceId: inv.id,
-        });
-        if (plan.monthlyCredits > PLANS[credited].monthlyCredits) {
-          await db
-            .update(subscriptions)
-            .set({ creditedPlanId: plan.id })
-            .where(eq(subscriptions.userId, userId));
-        }
-      } else {
-        // New subscription or renewal: last period's credits expire, this period's are granted.
-        await startBillingPeriod(db, { userId, plan, invoiceId: inv.id });
-        await db
-          .update(subscriptions)
-          .set({ creditedPlanId: plan.id })
-          .where(eq(subscriptions.userId, userId));
-      }
+      if (sub) await applyPaidInvoice(db, inv, sub);
       break;
     }
     default:
@@ -191,4 +207,37 @@ export async function handleStripeEvent(
 
   await db.insert(stripeEvents).values({ id: event.id, type: event.type }).onConflictDoNothing();
   return handled ? "processed" : "ignored";
+}
+
+export type SyncDeps = {
+  /** The customer's subscriptions, newest first, each with its latest invoice (normalized). */
+  listSubscriptions: (
+    customerId: string,
+  ) => Promise<
+    { sub: NormalizedSubscription; latestInvoice: (NormalizedInvoice & { paid: boolean }) | null }[]
+  >;
+};
+
+export type SyncResult = "no_customer" | "no_subscription" | "synced";
+
+/**
+ * Fallback for missed or delayed webhooks: reads the person's subscription straight from Stripe
+ * and applies it the same way the webhook would. Safe to run any number of times.
+ */
+export async function syncFromStripe(db: Db, userId: string, deps: SyncDeps): Promise<SyncResult> {
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+  if (!row) return "no_customer";
+  const all = await deps.listSubscriptions(row.stripeCustomerId);
+  const live = ["active", "trialing", "past_due"];
+  const pick = all.find((x) => live.includes(x.sub.status)) ?? all[0];
+  if (!pick) return "no_subscription";
+  // Only ever apply it to this person, whatever the subscription's metadata says.
+  const sub = { ...pick.sub, userId };
+  await saveSubscription(db, sub);
+  if (live.includes(sub.status)) {
+    if (pick.latestInvoice?.paid) await applyPaidInvoice(db, pick.latestInvoice, sub);
+  } else if (sub.status === "canceled" && row.creditedPlanId) {
+    await endSubscription(db, userId, sub);
+  }
+  return "synced";
 }
