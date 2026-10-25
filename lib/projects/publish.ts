@@ -24,7 +24,7 @@ import { sha256Hex } from "@/lib/storage/keys";
 import { detectCoverType } from "@/lib/upload/mime";
 import { scanFiles } from "@/lib/upload/scan";
 import { attachTags } from "./create";
-import { projectMetadataSchema, uniqueSlug } from "./metadata";
+import { projectMetadataSchema, RIGHTS_STATEMENT_VERSION, uniqueSlug } from "./metadata";
 import { loadEditorFiles } from "./versions";
 
 /** What someone confirms when publishing a remix. Bump the version when the wording changes. */
@@ -117,6 +117,8 @@ export async function publishDraft(
     coverDataUrl = `data:${type.mime};base64,${Buffer.from(input.cover).toString("base64")}`;
   }
 
+  if (!coverUrl) throw new PublishError("Add a cover image.", "cover");
+
   const verdict = await deps.moderate({
     texts: [meta.title, meta.description, ...meta.tags],
     imageDataUrls: coverDataUrl ? [coverDataUrl] : [],
@@ -165,7 +167,7 @@ export async function publishDraft(
         projectId,
         userId: viewer!.userId,
         licenseId: meta.licenseId,
-        statementVersion: REMIX_RIGHTS_STATEMENT_VERSION,
+        statementVersion: chain.length ? REMIX_RIGHTS_STATEMENT_VERSION : RIGHTS_STATEMENT_VERSION,
       });
       const events = [];
       if (scan.flags.length) {

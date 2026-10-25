@@ -15,6 +15,7 @@ import { AI_LIMITS } from "@/config/limits";
 import { modelAllowed } from "@/config/plans";
 import { estimateCredits } from "@/lib/billing/estimate";
 import type { FileChange } from "@/lib/ai/edit-protocol";
+import { firstPromptKey } from "@/lib/editor/first-prompt";
 import { cn } from "@/lib/utils/cn";
 
 export type ChatItem = {
@@ -138,6 +139,7 @@ export function ChatPanel({
   onToggleFile,
   onUndo,
   currentVersionId,
+  projectId,
 }: {
   items: ChatItem[];
   proposal: Proposal | null;
@@ -152,8 +154,23 @@ export function ChatPanel({
   onToggleFile: (path: string) => void;
   onUndo: (versionId: string) => void;
   currentVersionId: string;
+  projectId: string;
 }) {
   const [prompt, setPrompt] = useState("");
+  // A description typed on the Create page waits here; it's only sent when the person clicks Send.
+  useEffect(() => {
+    try {
+      const key = firstPromptKey(projectId);
+      const waiting = sessionStorage.getItem(key);
+      if (!waiting) return;
+      sessionStorage.removeItem(key);
+      // Reading browser storage has to happen after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPrompt(waiting);
+    } catch {
+      // Storage blocked: start empty.
+    }
+  }, [projectId]);
   const [images, setImages] = useState<Attached[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const usable = (m: ModelOption) => m.available && modelAllowed(m.tier, credits.modelTier);

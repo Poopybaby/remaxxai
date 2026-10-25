@@ -16,7 +16,7 @@ export default function DraftsPage() {
     <section className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="type-wide text-4xl font-black">Drafts</h1>
-        <p className="text-muted">Your remixes in progress. Only you can see them.</p>
+        <p className="text-muted">Projects you&apos;re creating or remixing. Only you can see them.</p>
       </div>
       <Suspense
         fallback={<div className="bg-panel h-64 rounded-[var(--radius-card)]" aria-hidden />}
@@ -45,11 +45,16 @@ async function Drafts() {
       <div className="border-line-strong flex min-h-56 flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border border-dashed p-8 text-center">
         <p className="text-fg font-semibold">No drafts yet</p>
         <p className="text-muted max-w-[44ch] text-sm">
-          Find a template you like and hit Remix. You&apos;ll get your own copy to change with AI.
+          Start something new, or find a template you like and hit Remix.
         </p>
-        <Link href="/explore" className={buttonClasses("secondary", "sm", "mt-1")}>
-          Explore templates
-        </Link>
+        <div className="mt-1 flex gap-2">
+          <Link href="/create" className={buttonClasses("primary", "sm")}>
+            Create
+          </Link>
+          <Link href="/explore" className={buttonClasses("secondary", "sm")}>
+            Explore templates
+          </Link>
+        </div>
       </div>
     );
   }

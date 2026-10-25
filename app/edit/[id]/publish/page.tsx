@@ -14,10 +14,11 @@ import {
   remixLicenseNote,
 } from "@/lib/licensing/compat";
 import { getProjectBySlug } from "@/lib/projects/queries";
+import { RIGHTS_STATEMENT } from "@/lib/projects/metadata";
 import { REMIX_RIGHTS_STATEMENT } from "@/lib/projects/publish";
 import { PublishForm } from "./publish-form";
 
-export const metadata: Metadata = { title: "Publish your remix", robots: { index: false } };
+export const metadata: Metadata = { title: "Publish to the gallery", robots: { index: false } };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -25,10 +26,10 @@ export default function PublishPage({ params }: PageProps<"/edit/[id]/publish">)
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-12 sm:px-6">
       <div className="flex flex-col gap-3">
-        <h1 className="type-wide text-4xl font-black">Publish your remix</h1>
+        <h1 className="type-wide text-4xl font-black">Publish to the gallery</h1>
         <p className="text-muted max-w-[60ch]">
-          It goes into the gallery as your own template, with credit to everyone it&apos;s built on.
-          Others can then remix it too.
+          It goes into the gallery under your name, and others can remix it with credit to you (and
+          to anything it&apos;s built on).
         </p>
       </div>
       <Suspense
@@ -91,7 +92,8 @@ async function PublishLoader({ params }: Pick<PageProps<"/edit/[id]/publish">, "
         license: LICENSES[c.licenseId].shortName,
         available: c.available,
       }))}
-      rightsStatement={REMIX_RIGHTS_STATEMENT}
+      rightsStatement={chain.length ? REMIX_RIGHTS_STATEMENT : RIGHTS_STATEMENT}
+      isRemix={chain.length > 0}
     />
   );
 }

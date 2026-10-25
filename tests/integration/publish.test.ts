@@ -12,7 +12,10 @@ import {
   REMIX_RIGHTS_STATEMENT_VERSION,
 } from "@/lib/projects/publish";
 import { getProjectBySlug } from "@/lib/projects/queries";
-import { createRemix } from "@/lib/projects/remix";
+import { createFromStarter } from "@/lib/projects/new-project";
+import { createRemix, MAX_DRAFTS_PER_USER } from "@/lib/projects/remix";
+import { STARTER_ORDER, STARTERS, titleFromIdea } from "@/lib/projects/starters";
+import { LICENSE_IDS } from "@/config/licenses";
 import { loadEditorFiles, saveVersion } from "@/lib/projects/versions";
 import { buildSeedSql, seedUuid } from "@/lib/seed/build-sql";
 import { createAuthUser, createTestDb, type TestDb } from "../helpers/db";
@@ -220,5 +223,89 @@ describe("publishDraft", () => {
       ),
     ).rejects.toThrow(/can't be published/);
     expect((await project(draft.id)).status).toBe("draft");
+  });
+});
+
+describe("Create (new projects from a starter)", () => {
+  it("makes a private draft owned by the person, with no remix credit", async () => {
+    const draft = await createFromStarter(t.db, ana, {
+      starter: "landing",
+      idea: "Make a landing page for my mobile car detailing service",
+    });
+    expect(draft).toMatchObject({ status: "draft", ownerId: ana!.userId, parentProjectId: null });
+    expect(draft.title).toBe("Landing page for my mobile car detailing service");
+    expect(await getCreditChain(t.db, draft.id)).toEqual([]);
+    const files = await loadEditorFiles(t.db, draft.currentVersionId!);
+    expect(files.map((f) => f.path).sort()).toEqual(Object.keys(STARTERS.landing.files).sort());
+    // Nothing upstream, so every license is open to it.
+    expect(await licensesForDraft(t.db, draft.id)).toEqual([...LICENSE_IDS]);
+  });
+
+  it("needs a cover to publish, then publishes under any license with the upload rights statement", async () => {
+    const draft = await createFromStarter(t.db, ana, { starter: "app" });
+    expect(draft.title).toBe("My small app");
+    await expect(
+      publishDraft(
+        t.db,
+        ana,
+        draft.id,
+        { metadata: meta({ title: "Habit grid" }), cover: null },
+        pass,
+      ),
+    ).rejects.toMatchObject({ field: "cover" });
+    const res = await publishDraft(
+      t.db,
+      ana,
+      draft.id,
+      { metadata: meta({ title: "Habit grid", licenseId: "cc0-1.0" }), cover: PNG },
+      pass,
+    );
+    expect(res.status).toBe("published");
+    const rows = await t.db
+      .select()
+      .from(rightsAttestations)
+      .where(eq(rightsAttestations.projectId, draft.id));
+    expect(rows.map((r) => r.statementVersion)).not.toContain(REMIX_RIGHTS_STATEMENT_VERSION);
+  });
+
+  it("only the owner can open or publish it", async () => {
+    const draft = await createFromStarter(t.db, ana, { starter: "blank" });
+    await expect(
+      publishDraft(t.db, ben, draft.id, { metadata: meta(), cover: PNG }, pass),
+    ).rejects.toThrow(PermissionError);
+    await expect(createFromStarter(t.db, null, { starter: "blank" })).rejects.toThrow(
+      PermissionError,
+    );
+  });
+
+  it("counts toward the draft limit", async () => {
+    const carl = await makeUser("carl");
+    for (let i = 0; i < MAX_DRAFTS_PER_USER; i++)
+      await createFromStarter(t.db, carl, { starter: "blank" });
+    await expect(createFromStarter(t.db, carl, { starter: "blank" })).rejects.toThrow(/drafts/);
+  });
+
+  it("every starter is a small, safe static project", () => {
+    for (const id of STARTER_ORDER) {
+      const s = STARTERS[id];
+      expect(s.files["index.html"]).toContain("<!doctype html>");
+      for (const text of Object.values(s.files)) {
+        expect(text).not.toMatch(/https?:\/\/(?!example\.com)/);
+        expect(text.length).toBeLessThan(20_000);
+      }
+    }
+  });
+
+  it("titles come from the description", () => {
+    expect(titleFromIdea("A booking page for a barbershop", "x")).toBe(
+      "Booking page for a barbershop",
+    );
+    expect(titleFromIdea("   ", "My blank page")).toBe("My blank page");
+    expect(
+      titleFromIdea("A booking page for a barbershop with prices and opening hours", "x"),
+    ).toBe("Booking page for a barbershop with prices and opening hours");
+    expect(titleFromIdea("make me a countdown page for my album release, neon!", "x")).toBe(
+      "Countdown page for my album release neon",
+    );
   });
 });

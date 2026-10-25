@@ -34,6 +34,7 @@ type Props = {
     available: boolean;
   }[];
   rightsStatement: string;
+  isRemix: boolean;
 };
 
 export function PublishForm({
@@ -43,6 +44,7 @@ export function PublishForm({
   licenseNote,
   chain,
   rightsStatement,
+  isRemix,
 }: Props) {
   const router = useRouter();
   const [styles, setStyles] = useState<string[]>(initial.styles.slice(0, 4));
@@ -140,8 +142,8 @@ export function PublishForm({
       >
         <h2 className="text-xl font-bold">Almost there</h2>
         <p className="text-muted">
-          Your remix is held for a quick review before it shows in the gallery. You&apos;ll find it
-          on your profile in the meantime.
+          It&apos;s held for a quick review before it shows in the gallery. You&apos;ll find it on
+          your profile in the meantime.
         </p>
         <div className="flex gap-2">
           <ButtonLink href={`/p/${held}`}>See it</ButtonLink>
@@ -199,7 +201,7 @@ export function PublishForm({
               <img src={coverShown} alt="Cover preview" className="size-full object-cover" />
             ) : (
               <div className="text-faint grid size-full place-items-center p-4 text-center text-sm">
-                Add a screenshot of your remix
+                Add a screenshot
               </div>
             )}
           </div>
@@ -220,7 +222,7 @@ export function PublishForm({
                 ? "Your new cover."
                 : initial.coverUrl
                   ? "Using the original's cover. A screenshot of your version is better."
-                  : "PNG, JPG, WebP or GIF."}
+                  : "Add a screenshot of your project. PNG, JPG, WebP or GIF."}
             </p>
             {errors.cover ? (
               <p role="alert" className="text-danger text-sm">
@@ -251,7 +253,11 @@ export function PublishForm({
           id="description"
           label="Description"
           error={errors.description}
-          hint="What did you change, and what could someone make from it next?"
+          hint={
+            isRemix
+              ? "What did you change, and what could someone make from it next?"
+              : "What is it, and what could someone remix it into?"
+          }
         >
           <Textarea
             id="description"
@@ -366,7 +372,7 @@ export function PublishForm({
           ← Back to the editor
         </Link>
         <Button type="submit" size="lg" disabled={submitting}>
-          {submitting ? "Publishing…" : "Publish remix"}
+          {submitting ? "Publishing…" : isRemix ? "Publish remix" : "Publish project"}
         </Button>
       </div>
     </form>

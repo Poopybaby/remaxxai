@@ -526,6 +526,7 @@ export function Editor({ data }: { data: EditorData }) {
             }
             onUndo={(versionId) => restore(versionId, "Undid that change.")}
             currentVersionId={saved.versionId}
+            projectId={project.id}
           />
         </aside>
         <section

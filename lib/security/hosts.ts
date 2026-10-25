@@ -23,6 +23,7 @@ export const SIGNED_IN_PATHS = [
   "/drafts",
   "/edit",
   "/billing",
+  "/create",
 ] as const;
 
 export function requiresSignIn(pathname: string): boolean {

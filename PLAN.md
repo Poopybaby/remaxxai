@@ -209,7 +209,9 @@ Credits formula (all knobs in `config/plans.ts`):
 - [x] Free trial prompts, paywall, Stripe Checkout + Portal + webhooks (test mode), monthly grants
 - [x] Tier → model access enforcement; Power tier gets higher rate limits/concurrency
 - [x] Tests: ledger invariant, concurrent spends, webhook idempotency, refund on failure, tier gating
-- [ ] **Follow-up (D'vaunte, this weekend): turn on the other AI models.** Add `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` and `DEEPSEEK_API_KEY` in Vercel and redeploy; `/api/health` → `aiModels` lists which providers are on. Before relying on them, check the Gemini and DeepSeek model IDs and prices in `config/models.ts` against each provider's own pricing page (they came from third-party summaries), then try one edit per model in the editor. Only OpenAI is set up today, so the picker shows the others as "not set up".
+- [x] Billing fallback: returning from checkout (and a "Refresh from Stripe" button) reads the subscription straight from Stripe, so a missed webhook can't leave a paid plan without credits
+- [x] **Create:** a Create button in the header and `/create` page. Describe a project (the description waits in the editor's chat) and start from one of five original starters (blank, landing page, portfolio, link page, small app). It starts as a private draft and publishes with any license, plus the upload rights statement
+- **Decided Oct 25, 2026: GPT only for now.** The Claude, Gemini and DeepSeek keys are deferred past Phase 6. The editor offers OpenAI models only until those keys are added (adding one is just its env var; check the model IDs and prices in `config/models.ts` against the provider's pricing page first).
 
 **Phase 6 — Polish & Launch**
 
