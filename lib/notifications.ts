@@ -48,7 +48,12 @@ export async function listNotifications(
     .leftJoin(projects, eq(projects.id, notifications.projectId))
     .where(eq(notifications.recipientId, userId))
     .orderBy(desc(notifications.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .catch((err: unknown) => {
+      // E.g. the notifications migration hasn't been run yet: show none rather than an error page.
+      console.error("[notifications.list]", err);
+      return [];
+    });
   return rows.map((r) => {
     const meta = (r.n.meta ?? {}) as Record<string, unknown>;
     return {
@@ -76,15 +81,25 @@ export async function markAllRead(db: Db, viewer: Viewer): Promise<void> {
     .where(and(eq(notifications.recipientId, viewer.userId), isNull(notifications.readAt)));
 }
 
-/** Review outcomes, written by the moderation code (likes, follows and remixes use triggers). */
+/**
+ * Review outcomes, written by the moderation code (likes, follows and remixes use triggers).
+ * Best effort: inside a savepoint, so a failed notification never undoes the moderation action
+ * it describes.
+ */
 export async function notifyReviewOutcome(
-  db: Pick<Db, "insert">,
+  db: Pick<Db, "transaction">,
   input: { recipientId: string; projectId: string; kind: "approved" | "removed"; note?: string },
 ): Promise<void> {
-  await db.insert(notifications).values({
-    recipientId: input.recipientId,
-    kind: input.kind,
-    projectId: input.projectId,
-    meta: input.note ? { note: input.note.slice(0, 300) } : {},
-  });
+  try {
+    await db.transaction(async (sp) => {
+      await sp.insert(notifications).values({
+        recipientId: input.recipientId,
+        kind: input.kind,
+        projectId: input.projectId,
+        meta: input.note ? { note: input.note.slice(0, 300) } : {},
+      });
+    });
+  } catch (err) {
+    console.error("[notifications.review]", err);
+  }
 }

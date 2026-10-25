@@ -118,6 +118,33 @@ describe("notifications", () => {
     expect(removed?.note).toBeTruthy();
   });
 
+  it("never lets a notification problem block moderation or the notifications page", async () => {
+    const draft = await createRemix(t.db, fan, seedUuid("project:moonbrew"));
+    await publishDraft(
+      t.db,
+      fan,
+      draft.id,
+      { metadata: meta("Held two"), cover: null },
+      {
+        moderate: async () => ({ verdict: "flag", categories: ["harassment"], source: "openai" }),
+      },
+    );
+    // As if the notifications migration hadn't been run yet: no table, no trigger.
+    await t.pg.exec(`
+      alter table projects disable trigger projects_notify_remix;
+      alter table notifications rename to notifications_hidden;`);
+    try {
+      expect((await approveProject(t.db, admin, draft.id)).ok).toBe(true);
+      await removeProject(t.db, admin, draft.id, { copyright: false, note: "Spam" });
+      expect(await listNotifications(t.db, fan!.userId)).toEqual([]);
+      expect(await unreadCount(t.db, fan!.userId)).toBe(0);
+    } finally {
+      await t.pg.exec(`
+        alter table notifications_hidden rename to notifications;
+        alter table projects enable trigger projects_notify_remix;`);
+    }
+  });
+
   it("counts unread and marks everything read", async () => {
     expect(await unreadCount(t.db, maker!.userId)).toBeGreaterThan(0);
     await markAllRead(t.db, maker);

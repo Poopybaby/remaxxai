@@ -215,11 +215,12 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 6 — Polish & Launch**
 
-- [ ] Creator portfolios, trending/new/staff-picks, notifications
-- [ ] SEO + dynamic Open Graph image per project
-- [ ] Admin dashboard: reports, users, credit/usage, model cost vs revenue
-- [ ] Sentry, PostHog, accessibility pass (WCAG AA), mobile pass, Lighthouse budget
-- [ ] Final legal pages (still DRAFT), deployment guide, Playwright smoke suite in CI
+- [x] Creator portfolios, trending/new/staff-picks, notifications
+- [x] SEO + dynamic Open Graph image per project (plus sitemap, robots, structured data)
+- [x] Admin dashboard: reports, users, credit/usage, model cost vs revenue, last Stripe webhook
+- [x] Sentry, PostHog (optional keys, privacy-locked), accessibility pass (WCAG 2.2 AA), mobile pass, load-time pass
+- [x] Legal pages updated for billing and Create (still DRAFT), [deployment guide](docs/DEPLOYMENT.md), Playwright smoke suite in CI on real Postgres
+- [ ] **Launch checklist (D'vaunte):** see section 6 of [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): lawyer review of the legal pages, DMCA agent registration, real email sender, Upstash, Stripe live mode, then `AI_ACCESS=signed-in`
 
 **Phase 2 build notes (decided while building, cheap to change later):**
 
@@ -263,6 +264,15 @@ Credits formula (all knobs in `config/plans.ts`):
 - Publishing a remix uses the same hourly limit as uploads and the same scanner and moderation; flagged remixes are held for review.
 - Credits are charged for "Break it down" only when a version hasn't been explained yet; cached explanations are free.
 
+**Phase 6 build notes:**
+
+- Accessibility: axe-core (WCAG 2.2 A/AA) finds no serious or critical issues on 20 pages at desktop and phone widths; the CI smoke suite re-checks the main ones on every push. The "faint" text token was the main fix (4.1:1 → 4.7–5.7:1).
+- Load: about 160–170 KB of gzipped JavaScript per page, most of it React and the Next.js router; Supabase's SDK loads only when someone signs in, and Sentry and PostHog only when their keys are set, after the page is interactive. Largest paint is under 0.6 s locally.
+- Monitoring is privacy-first: Sentry's v11 `dataCollection` is switched off (it defaults to collecting cookies, bodies, AI prompts and stack-frame variables) and reports are scrubbed again before sending; PostHog is cookieless with no person profiles or recordings. The privacy page says so.
+- Smoke tests run the built app against a real Postgres with pgvector (not the in-memory test database), which is where a production-only bug (dates in raw SQL) was caught this phase. They use local stand-ins for OpenAI and Supabase sign-in, so CI needs no secrets.
+- Next 16 keeps the previous page mounted (hidden) for instant back navigation; tests and any DOM queries must scope to the visible page.
+- Admin pages stream, so a non-admin gets a 200 with the not-found screen rather than a 404; the smoke test checks that no admin data is in the response.
+
 ---
 
 ## 7. Keys you'll need to supply (by phase)
@@ -274,7 +284,7 @@ Credits formula (all knobs in `config/plans.ts`):
 | 3     | `OPENAI_API_KEY` (embeddings + moderation)                                                                                                                                                          |
 | 4     | `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `DEEPSEEK_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                       |
 | 5     | `STRIPE_SECRET_KEY` (test, `sk_test_...`), `STRIPE_WEBHOOK_SECRET` (`whsec_...`). Later: the remaining Phase 4 model keys (see the Phase 5 follow-up)                                               |
-| 6     | `SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_KEY`                                                                                                                                                             |
+| 6     | Optional: `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_KEY`. Before launch: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, a real email sender in Supabase                                 |
 
 Until keys arrive I can build and test everything against PGlite and mocked providers.
 
@@ -282,7 +292,7 @@ Until keys arrive I can build and test everything against PGlite and mocked prov
 
 ## 8. Questions (expensive to undo)
 
-**All decided Oct 21, 2026.** Plan approved. Phases 1–5 complete.
+**All decided Oct 21, 2026.** Plan approved. Phases 1–6 complete.
 
 **Q1. Auth provider — DECIDED:** Supabase Auth.
 

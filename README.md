@@ -4,6 +4,10 @@ A community gallery of AI-built templates plus a browser editor for remixing the
 
 **Status:** Phases 1 (Foundation) and 2 (Gallery) complete: auth, profiles, landing page, uploads with licenses and rights confirmation, sandboxed previews, source browser, likes, saves, follows, filters, reports, DMCA form, admin review queue, and 29 starter templates.
 
+## Deploying
+
+Step-by-step setup, updating, and the launch checklist: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Stack
 
 Next.js 16 (App Router, Cache Components) · TypeScript strict · Tailwind CSS 4 · Supabase (Postgres, Auth, Storage) · Drizzle ORM · Upstash rate limiting · Vitest + PGlite · GitHub Actions · Vercel.

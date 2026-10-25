@@ -3,9 +3,9 @@
  * Bump a version when the document changes materially; acceptances are recorded per version.
  */
 export const LEGAL_VERSIONS = {
-  terms: "2026-10-21-draft",
+  terms: "2026-10-25-draft",
   acceptableUse: "2026-10-21-draft",
-  privacy: "2026-10-21-draft",
+  privacy: "2026-10-25-draft",
 } as const;
 
 /** Decided Oct 21, 2026: REMAXX is 18+ at launch. */

@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
 import { LEGAL_VERSIONS } from "@/config/legal";
+import type { ProviderId } from "@/config/models";
 import { siteConfig } from "@/config/site";
+import { configuredProviders } from "@/lib/ai/server";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
+const PROVIDER_NAMES: Record<ProviderId, string> = {
+  openai: "OpenAI (ChatGPT)",
+  anthropic: "Anthropic (Claude)",
+  google: "Google (Gemini)",
+  deepseek: "DeepSeek",
+};
+
 export default function PrivacyPage() {
+  // Lists only the AI providers this deployment actually sends data to.
+  const providers = [...configuredProviders()];
   return (
     <>
       <h1 className="type-wide text-fg mb-2 text-4xl font-black">Privacy Policy</h1>
@@ -29,6 +40,10 @@ export default function PrivacyPage() {
           security, abuse prevention, and billing.
         </li>
         <li>
+          <strong>Payments:</strong> your plan, billing status, and Stripe customer ID. Card details
+          are entered on Stripe&apos;s own pages and never reach or get stored by REMAXX.
+        </li>
+        <li>
           <strong>Waitlist:</strong> the email address you give us, used only to send your invite.
         </li>
       </ul>
@@ -36,10 +51,19 @@ export default function PrivacyPage() {
       <h2>AI providers</h2>
       <p>
         When you use an AI feature, your prompt, attached images, and the relevant project files are
-        sent to the provider of the model you choose: Anthropic (Claude), OpenAI (ChatGPT), Google
-        (Gemini), or DeepSeek. Each provider processes that data under its own terms.{" "}
-        <strong>DeepSeek processes data on servers in the People&apos;s Republic of China.</strong>{" "}
-        If you don&apos;t want your data processed there, choose a different model.
+        sent to the company that runs the model you choose. Today that is{" "}
+        {providers.length ? providers.map((p) => PROVIDER_NAMES[p]).join(", ") : "none yet"}. Each
+        provider processes that data under its own terms. We&apos;ll update this page before adding
+        another.
+        {providers.includes("deepseek") ? (
+          <>
+            {" "}
+            <strong>
+              DeepSeek processes data on servers in the People&apos;s Republic of China.
+            </strong>{" "}
+            If you don&apos;t want your data processed there, choose a different model.
+          </>
+        ) : null}
       </p>
 
       <h2>Service providers</h2>

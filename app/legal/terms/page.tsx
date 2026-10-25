@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LEGAL_VERSIONS, MINIMUM_AGE } from "@/config/legal";
+import { FREE_TRIAL_PROMPTS } from "@/config/plans";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Terms of Service" };
@@ -21,16 +22,17 @@ export default function TermsPage() {
       <h2>2. What REMAXX is</h2>
       <p>
         REMAXX is a gallery of website, app and UI templates shared by its members, and an editor
-        where you can remix those templates with the help of AI models from third-party providers.
-        REMAXX is for remixing work that people have chosen to share under a license. It is not a
-        tool for copying or cloning commercial products.
+        where you can create new projects or remix shared templates, by hand or with the help of AI
+        models from third-party providers. REMAXX is for creating your own work and remixing work
+        that people have chosen to share under a license. It is not a tool for copying or cloning
+        commercial products.
       </p>
 
       <h2>3. Your content and licenses</h2>
       <p>
-        You keep ownership of what you upload. When you upload a template you choose a license for
-        it (for example MIT, Apache-2.0, CC BY, CC BY-SA, CC0, or REMAXX Personal Use), and you
-        confirm that you own the work or have permission to share it under that license.
+        You keep ownership of what you upload or create. When you publish a template you choose a
+        license for it (for example MIT, Apache-2.0, CC BY, CC BY-SA, CC0, or REMAXX Personal Use),
+        and you confirm that you own the work or have permission to share it under that license.
       </p>
       <p>
         You also give REMAXX a worldwide, non-exclusive, royalty-free license to host, store, copy,
@@ -71,8 +73,25 @@ export default function TermsPage() {
 
       <h2>7. Credits and subscriptions</h2>
       <p>
-        Paid plans and credits will be described here when billing launches. Credits have no cash
-        value and can&apos;t be transferred.
+        AI requests use credits. Every new account gets {FREE_TRIAL_PROMPTS} free AI prompts. The
+        editor shows an estimate before you send a request; the credits charged are based on the
+        model and how much it reads and writes. If a request fails, times out, or comes back
+        unusable, its credits are returned. When you run out, AI requests stop until you have more;
+        browsing, editing by hand and publishing stay free.
+      </p>
+      <p>
+        Paid plans are monthly subscriptions billed through Stripe. They renew automatically each
+        month until you cancel, which you can do at any time from your billing page; the plan then
+        stays active until the end of the period you paid for. Each paid period adds that
+        plan&apos;s credits, and credits left at the end of a period expire and don&apos;t roll
+        over. Upgrading mid-period charges the prorated difference and adds the difference in
+        credits straight away; downgrading takes effect at the next period. We&apos;ll tell you
+        before a price change applies to you.
+      </p>
+      <p>
+        Credits have no cash value, can&apos;t be transferred or sold, and aren&apos;t refundable
+        except where the law requires. If you think you were charged by mistake, contact us and
+        we&apos;ll look into it.
       </p>
 
       <h2>8. Removal and termination</h2>
