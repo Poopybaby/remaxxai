@@ -6,7 +6,8 @@ import { runAi, type PipelineDeps, type PipelineInput } from "@/lib/ai/pipeline"
 import { AiError, type GenerateRequest, type GenerateResult } from "@/lib/ai/providers";
 import { explainVersion, proposeEdit } from "@/lib/ai/services";
 import type { Viewer } from "@/lib/auth/permissions";
-import { aiMessages, explanations } from "@/lib/db/schema";
+import { applyEntries } from "@/lib/billing/credits";
+import { aiMessages, creditAccounts, explanations, subscriptions } from "@/lib/db/schema";
 import type { ModerationVerdict } from "@/lib/moderation";
 import { createProfile } from "@/lib/profiles";
 import { createRemix } from "@/lib/projects/remix";
@@ -91,7 +92,29 @@ beforeAll(async () => {
   await t.pg.exec(await buildSeedSql());
   admin = await makeUser("boss", "admin");
   user = await makeUser("pat", "user");
+  // Both test accounts are on Pro with plenty of credits; credit edge cases have their own tests.
+  for (const v of [admin, user]) {
+    await givePro(v!.userId);
+    await applyEntries(t.db, v!.userId, [
+      { delta: 100_000, kind: "admin_adjust", key: `seed:${v!.userId}` },
+    ]);
+  }
 });
+
+async function givePro(userId: string) {
+  await t.db.insert(subscriptions).values({
+    userId,
+    stripeCustomerId: `cus_${userId.slice(0, 8)}`,
+    planId: "pro",
+    status: "active",
+    currentPeriodEnd: new Date(Date.now() + 30 * 86400_000),
+  });
+}
+
+async function balance(userId: string) {
+  const [a] = await t.db.select().from(creditAccounts).where(eq(creditAccounts.userId, userId));
+  return a!;
+}
 afterAll(async () => {
   await t.close();
 });
@@ -147,7 +170,7 @@ describe("runAi checks", () => {
     const f = fakeDeps({ access: "signed-in" });
     await t.pg.query(
       `insert into ai_messages (user_id, kind, role, status) select $1, 'edit', 'assistant', 'ok' from generate_series(1, $2)`,
-      [user!.userId, AI_LIMITS.perDay],
+      [user!.userId, AI_LIMITS.paidPerDay],
     );
     expect(await runAi(f.deps, input(user))).toMatchObject({ code: "daily_limit" });
     // Admins have a higher cap.
@@ -184,10 +207,17 @@ describe("runAi checks", () => {
     expect(row).toMatchObject({ role: "user", status: "blocked", content: "something nasty" });
   });
 
-  it("logs tokens and cost on success", async () => {
+  it("logs tokens and cost on success, and charges credits for what it actually cost", async () => {
     const f = fakeDeps();
+    const before = (await balance(admin!.userId)).balance;
     const res = await runAi(f.deps, input(admin));
-    expect(res).toMatchObject({ ok: true, costUsd: (1000 * 2 + 200 * 10) / 1e6 });
+    // $0.004 × 2.5 ÷ $0.01 = 1 credit.
+    expect(res).toMatchObject({
+      ok: true,
+      costUsd: (1000 * 2 + 200 * 10) / 1e6,
+      credits: { charged: 1 },
+    });
+    expect((await balance(admin!.userId)).balance).toBe(before - 1);
     const rows = await t.db.select().from(aiMessages).where(eq(aiMessages.role, "assistant"));
     expect(rows[0]).toMatchObject({
       inputTokens: 1000,
@@ -207,7 +237,47 @@ describe("runAi checks", () => {
       error: "Claude Sonnet took too long. Try a smaller change, or another model.",
     });
     const [row] = await t.db.select().from(aiMessages).where(eq(aiMessages.role, "assistant"));
-    expect(row).toMatchObject({ status: "error", error: "Timed out after 110s" });
+    expect(row).toMatchObject({
+      status: "error",
+      error: "Timed out after 110s",
+      creditsCharged: 0,
+    });
+  });
+
+  it("refunds everything held when the provider fails", async () => {
+    const f = fakeDeps();
+    const before = (await balance(admin!.userId)).balance;
+    f.reply(new AiError("provider", "500"));
+    await runAi(f.deps, input(admin));
+    expect((await balance(admin!.userId)).balance).toBe(before);
+  });
+
+  it("stops hard without credits or free prompts, and before calling the model", async () => {
+    const broke = await makeUser("broke", "admin");
+    await t.db
+      .update(creditAccounts)
+      .set({ trialPrompts: 0 })
+      .where(eq(creditAccounts.userId, broke!.userId));
+    const f = fakeDeps();
+    const res = await runAi(f.deps, input(broke, { model: getModel("gpt-mini")! }));
+    expect(res).toMatchObject({ ok: false, status: 402, code: "no_credits" });
+    expect(f.calls).toHaveLength(0);
+  });
+
+  it("uses a free prompt on a Starter model, and keeps top models for paid plans", async () => {
+    const fresh = await makeUser("fresh", "admin");
+    const f = fakeDeps();
+    expect(await runAi(f.deps, input(fresh))).toMatchObject({
+      ok: false,
+      status: 403,
+      code: "model_locked",
+    });
+    const res = await runAi(f.deps, input(fresh, { model: getModel("gpt-mini")! }));
+    expect(res).toMatchObject({
+      ok: true,
+      payment: { mode: "trial" },
+      credits: { charged: 0, trialPrompts: 1 },
+    });
   });
 });
 
@@ -321,7 +391,10 @@ describe("proposeEdit", () => {
     });
     if (!res.ok) throw new Error(res.error);
     expect(res.changes).toEqual([]);
-    expect(res.problems.at(-1)).toMatch(/cut off/);
+    expect(res.problems.join(" ")).toMatch(/cut off/);
+    // Nothing usable came back, so nothing is charged.
+    expect(res.problems.at(-1)).toBe("You weren't charged for this one.");
+    expect(res.credits.charged).toBe(0);
     const [row] = await t.db
       .select()
       .from(aiMessages)

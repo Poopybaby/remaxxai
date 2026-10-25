@@ -66,6 +66,7 @@ describe("first-time setup SQL", () => {
       "0002_gallery.sql",
       "0003_vibe_search.sql",
       "0004_editor.sql",
+      "0005_credits.sql",
     ]);
 
     // Old table kept under a new name; tasks still works with its own set_updated_at.
@@ -88,7 +89,7 @@ describe("first-time setup SQL", () => {
     const db = await freshDb(STARTER_TEMPLATE);
     // Phase 2's setup: the same script, minus the newer migrations.
     const phase2 = (await buildSetupSql()).replace(
-      /-- 0003_vibe_search\.sql[\s\S]*?-- 0004_editor\.sql[\s\S]*?\$setup\$;\n/,
+      /-- 0003_vibe_search\.sql[\s\S]*?-- 0005_credits\.sql[\s\S]*?\$setup\$;\n/,
       "",
     );
     expect(phase2).not.toContain("create table project_search");
@@ -105,6 +106,28 @@ describe("first-time setup SQL", () => {
       "select (select count(*)::int from projects) as projects, (select count(*)::int from project_search) as indexed",
     );
     expect(counts.rows[0]).toEqual({ projects: 29, indexed: 29 });
+  });
+
+  it("upgrades a Phase 4 project: everyone who already signed up gets their free prompts", async () => {
+    const db = await freshDb(STARTER_TEMPLATE);
+    const phase4 = (await buildSetupSql()).replace(/-- 0005_credits\.sql[\s\S]*?\$setup\$;\n/, "");
+    expect(phase4).not.toContain("create table credit_ledger");
+    await db.exec(phase4);
+    await db.exec(await buildSeedSql());
+    const before = await db.query<{ n: number }>("select count(*)::int as n from profiles");
+    expect(before.rows[0]!.n).toBeGreaterThan(0);
+
+    await db.exec(await buildSetupSql());
+    const accounts = await db.query<{ n: number; trial: number }>(
+      "select count(*)::int as n, min(trial_prompts)::int as trial from credit_accounts",
+    );
+    expect(accounts.rows[0]).toEqual({ n: before.rows[0]!.n, trial: 2 });
+    // The ledger refuses edits.
+    await expect(db.exec("update credit_ledger set delta = 1")).resolves.toBeDefined(); // no rows yet
+    await db.exec(
+      "insert into credit_ledger (user_id, delta, kind, idempotency_key) select id, 5, 'admin_adjust', 'k1' from profiles limit 1",
+    );
+    await expect(db.exec("update credit_ledger set delta = 500")).rejects.toThrow(/append-only/);
   });
 
   it("works on a brand-new project", async () => {

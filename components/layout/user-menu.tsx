@@ -84,6 +84,9 @@ export function UserMenu({
           <Link role="menuitem" href="/collections" className={item} onClick={() => setOpen(false)}>
             Saved
           </Link>
+          <Link role="menuitem" href="/billing" className={item} onClick={() => setOpen(false)}>
+            Billing and credits
+          </Link>
           {isAdmin ? (
             <Link role="menuitem" href="/admin" className={item} onClick={() => setOpen(false)}>
               Admin

@@ -9,7 +9,11 @@ import {
   type KeyboardEvent,
 } from "react";
 import { DiffView, lineStats } from "@/components/editor/diff-view";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AI_LIMITS } from "@/config/limits";
+import { modelAllowed } from "@/config/plans";
+import { estimateCredits } from "@/lib/billing/estimate";
 import type { FileChange } from "@/lib/ai/edit-protocol";
 import { cn } from "@/lib/utils/cn";
 
@@ -37,7 +41,16 @@ export type ModelOption = {
   vision: boolean;
   blurb: string;
   tier: "starter" | "pro";
+  inputPerMTok: number;
+  outputPerMTok: number;
   available: boolean;
+};
+
+export type Credits = {
+  balance: number;
+  trialPrompts: number;
+  planName: string | null;
+  modelTier: "starter" | "pro";
 };
 
 const SUGGESTIONS = [
@@ -115,6 +128,8 @@ export function ChatPanel({
   items,
   proposal,
   models,
+  credits,
+  inputChars,
   ai,
   busy,
   onAsk,
@@ -127,6 +142,8 @@ export function ChatPanel({
   items: ChatItem[];
   proposal: Proposal | null;
   models: ModelOption[];
+  credits: Credits;
+  inputChars: number;
   ai: { allowed: true } | { allowed: false; reason: string };
   busy: null | "ai" | "save" | "restore";
   onAsk: (prompt: string, modelId: string, images: { base64: string }[]) => void;
@@ -139,7 +156,8 @@ export function ChatPanel({
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<Attached[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
-  const firstAvailable = models.find((m) => m.available)?.id ?? models[0]?.id ?? "";
+  const usable = (m: ModelOption) => m.available && modelAllowed(m.tier, credits.modelTier);
+  const firstAvailable = models.find(usable)?.id ?? models[0]?.id ?? "";
   // Browser-only facts, read after hydration so the server and browser render the same thing.
   const canListen = useSyncExternalStore(
     noSubscribe,
@@ -150,7 +168,7 @@ export function ChatPanel({
   const [picked, setPicked] = useState<string | null>(null);
   const modelId =
     picked ??
-    (remembered && models.some((m) => m.id === remembered && m.available)
+    (remembered && models.some((m) => m.id === remembered && usable(m))
       ? remembered
       : firstAvailable);
   const [listening, setListening] = useState(false);
@@ -163,7 +181,22 @@ export function ChatPanel({
   }, [items.length, proposal, busy]);
 
   const model = models.find((m) => m.id === modelId);
-  const disabled = !ai.allowed || busy !== null || !model?.available;
+  // What this request will cost, and how it will be paid for (credits or a free prompt).
+  const estimate = model
+    ? estimateCredits(
+        model,
+        "edit",
+        inputChars + prompt.length + images.length * 3000,
+        AI_LIMITS.edit.maxOutputTokens,
+      )
+    : null;
+  const pay: "credits" | "trial" | "none" =
+    estimate && credits.balance >= estimate.typical && credits.balance > 0
+      ? "credits"
+      : credits.trialPrompts > 0 && model?.tier === "starter"
+        ? "trial"
+        : "none";
+  const disabled = !ai.allowed || busy !== null || !model || !usable(model) || pay === "none";
 
   function pickModel(id: string) {
     setPicked(id);
@@ -349,9 +382,13 @@ export function ChatPanel({
             title={model?.blurb}
           >
             {models.map((m) => (
-              <option key={m.id} value={m.id} disabled={!m.available}>
+              <option key={m.id} value={m.id} disabled={!usable(m)}>
                 {m.label}
-                {m.available ? "" : " (not set up)"}
+                {!m.available
+                  ? " (not set up)"
+                  : !modelAllowed(m.tier, credits.modelTier)
+                    ? " (Pro plan)"
+                    : ""}
               </option>
             ))}
           </select>
@@ -396,7 +433,28 @@ export function ChatPanel({
             {busy === "ai" ? "Working…" : "Send"}
           </Button>
         </div>
-        {model ? <p className="text-faint text-xs">{model.blurb}</p> : null}
+        <p className="text-faint flex flex-wrap items-center justify-between gap-x-3 text-xs">
+          <span>{model?.blurb}</span>
+          {ai.allowed && estimate ? (
+            pay === "credits" ? (
+              <span>
+                About {estimate.typical} credit{estimate.typical === 1 ? "" : "s"} ·{" "}
+                {credits.balance.toLocaleString()} left
+              </span>
+            ) : pay === "trial" ? (
+              <span className="text-cyan">Free prompt · {credits.trialPrompts} left</span>
+            ) : (
+              <span className="text-fg">
+                {credits.trialPrompts > 0
+                  ? "Free prompts work with Starter models. "
+                  : "Not enough credits. "}
+                <Link href="/pricing" className="text-magenta underline underline-offset-2">
+                  See plans
+                </Link>
+              </span>
+            )
+          ) : null}
+        </p>
       </form>
     </div>
   );

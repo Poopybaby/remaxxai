@@ -42,7 +42,10 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 | `ANTHROPIC_API_KEY`                                  | Claude in the editor    | console.anthropic.com → API Keys (optional; Claude models show "not set up" without it)               |
 | `GOOGLE_GENERATIVE_AI_API_KEY`                       | Gemini in the editor    | aistudio.google.com → Get API key (optional)                                                          |
 | `DEEPSEEK_API_KEY`                                   | DeepSeek in the editor  | platform.deepseek.com → API keys (optional)                                                           |
-| `AI_ACCESS`                                          | Who can use AI features | `admins` (default) or `signed-in`. Keep `admins` until credits exist (Phase 5)                        |
+| `AI_ACCESS`                                          | Who can use AI features | `admins` (default) or `signed-in`. Plans are only sold to people who can use AI                       |
+| `STRIPE_SECRET_KEY`                                  | Selling plans           | Stripe → Developers → API keys. Test key (`sk_test_...`) until launch                                 |
+| `STRIPE_WEBHOOK_SECRET`                              | Credits after payment   | Stripe → Developers → Webhooks → endpoint → Signing secret (`whsec_...`)                              |
+| `STRIPE_ALLOW_LIVE`                                  | Real charges            | Leave unset. Live keys are refused unless this is `true`                                              |
 | `VIBE_DESCRIBE_MODEL`                                | Style descriptions      | Optional; defaults to `gpt-5-mini`                                                                    |
 
 ## Supabase setup (one time)
@@ -128,7 +131,27 @@ tests/          unit/ and integration/ (PGlite)
 - Models answer in a small text format (`lib/ai/edit-protocol.ts`): SEARCH/REPLACE edits or whole-file writes. The answer is parsed and applied to a copy of the files, path-checked (no escaping the project, no touching images), and shown as a per-file diff. Nothing is saved until the person applies it.
 - **Versions:** every save, accepted AI change and restore is a new numbered version (`lib/projects/versions.ts`). Undo restores the previous version as a new one, so nothing is lost. Saves are rejected if the draft changed in another tab, and a draft can only reuse files from its own history.
 - **Break it down** (`/api/explain`) writes a plain-English tour of a version and caches it, so each template is explained once and then free to read for everyone.
+- **Publish** (`/edit/<id>/publish`, `lib/projects/publish.ts`) turns a draft into a gallery template. It runs the same checks as an upload (secret scanner, moderation of the text and cover), only offers licenses the whole credit chain allows (a CC BY-SA ancestor keeps every remix CC BY-SA; Personal Use stays Personal Use), records the person's rights confirmation, and keeps the "Remixed from" credit, which can't be removed. Flagged remixes are held for review.
 - Limits live in `config/limits.ts` (`AI_LIMITS`). Admins see today's AI usage and spend on `/admin`.
+
+## How credits and plans work
+
+- **One file for pricing:** [`config/plans.ts`](config/plans.ts) has the plans (price, monthly credits, model tier, rate limits), the markup (2.5×), what a credit is worth ($0.01) and the free prompts (2). Change a plan's price by editing it and bumping its `priceVersion`; Stripe prices can't be edited, so a new version makes a new price.
+- **Ledger:** every grant, hold, spend, refund, expiry and admin adjustment is an append-only row in `credit_ledger` (updates and deletes are refused by the database). `credit_accounts.balance` is kept in the same transaction and can never go below zero. Every row has a unique idempotency key, so retried webhooks and requests can't apply twice.
+- **An AI request** (`lib/ai/pipeline.ts` → `lib/billing/credits.ts`): the editor shows an estimate first. The server holds up to the maximum the request could cost, calls the model, then charges the actual cost (never more than the hold) and releases the rest. Failures, timeouts and unusable answers are refunded in full. With no credits left, requests stop (a free prompt is used instead if one is left, on Starter-tier models).
+- **Plans:** Starter gets the low-cost models; Pro and Power get every model. Power's priority is more requests per minute and two at once. Credits arrive when Stripe reports the invoice paid and expire when the next period starts. Upgrading mid-period adds the difference straight away; downgrades apply next period; cancelling ends the plan (and its credits) at the period end.
+- **Who can buy:** only people who can use AI (`AI_ACCESS`). With `AI_ACCESS=admins`, only admins see working plan buttons, so you can test checkout without anyone paying for something they can't use.
+- **Admin:** `/admin` shows credits charged this month against estimated provider cost, and lets admins add or remove credits by handle (recorded in the ledger with a note).
+
+## Stripe setup (test mode)
+
+1. In Stripe, stay in **Test mode**. Developers → API keys → copy the **Secret key** (`sk_test_...`) into `STRIPE_SECRET_KEY` on Vercel.
+2. Developers → Webhooks → **Add endpoint**: URL `https://<your app domain>/api/stripe/webhook`, events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`. Copy its **Signing secret** (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`.
+3. Redeploy, then check `/api/health`: `payments` should say `ok: test mode`.
+4. As an admin, open `/pricing`, pick a plan and pay with card `4242 4242 4242 4242`, any future date, any CVC. `/billing` should show the plan and its credits within a few seconds.
+5. Products, prices and the customer billing page (cancel, change card, invoices) are created automatically on first use.
+
+Going live later means a live key plus `STRIPE_ALLOW_LIVE=true`, a live-mode webhook, and `AI_ACCESS=signed-in`. Don't do it before the Terms and Privacy pages have had a lawyer's review.
 
 ## How to add an AI model
 

@@ -23,9 +23,11 @@ import {
   ProjectTooLargeError,
   type FileChange,
 } from "./edit-protocol";
+import { getEntitlement } from "@/lib/billing/credits";
 import {
   finishReply,
   getOrCreateSession,
+  refundCharge,
   runAi,
   sessionHistory,
   type PipelineDeps,
@@ -53,6 +55,7 @@ export type ProposedEdit = {
   changes: FileChange[];
   problems: string[];
   costUsd: number;
+  credits: { charged: number; balance: number; trialPrompts: number };
 };
 
 const failure = (
@@ -169,6 +172,14 @@ export async function proposeEdit(
     status: failed ? "error" : "ok",
     error: failed ? problems.join(" ").slice(0, 500) || "No usable changes" : null,
   });
+  // Nothing usable came back: the person isn't charged for it.
+  let credits = run.credits;
+  if (failed) {
+    await refundCharge(db, input.viewer!.userId, run.replyId, run.payment);
+    const after = await getEntitlement(db, input.viewer!.userId);
+    credits = { charged: 0, balance: after.balance, trialPrompts: after.trialPrompts };
+    problems.push("You weren't charged for this one.");
+  }
   return {
     ok: true,
     replyId: run.replyId,
@@ -176,12 +187,20 @@ export async function proposeEdit(
     changes: applied.changes,
     problems,
     costUsd: run.costUsd,
+    credits,
   };
 }
 
 // ── Break it down ────────────────────────────────────────────────────────────
 
-export type Explanation = { ok: true; content: string; modelId: string; cached: boolean };
+export type Explanation = {
+  ok: true;
+  content: string;
+  modelId: string;
+  cached: boolean;
+  /** Present when this request generated (and paid for) a new explanation. */
+  credits?: { charged: number; balance: number; trialPrompts: number };
+};
 
 export async function getCachedExplanation(
   db: Db,
@@ -258,5 +277,5 @@ export async function explainVersion(
     })
     .onConflictDoNothing();
   await finishReply(db, run.replyId, { content: `Explained ${row.project.title}` });
-  return { ok: true, content, modelId: model.id, cached: false };
+  return { ok: true, content, modelId: model.id, cached: false, credits: run.credits };
 }

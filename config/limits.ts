@@ -19,7 +19,8 @@ export const RATE_LIMITS = {
 } as const satisfies Record<string, RateLimitRule>;
 
 /**
- * AI editor limits. Until credits exist (Phase 5) these are what keep costs bounded.
+ * AI editor limits, on top of credits: a backstop against runaway cost or abuse (per-minute
+ * limits per plan live in config/plans.ts).
  * Every AI request also needs the person to pass `AI_ACCESS` (admins only by default).
  */
 export const AI_LIMITS = {
@@ -27,6 +28,8 @@ export const AI_LIMITS = {
   /** Requests per person per UTC day; admins get more for testing. */
   perDay: 40,
   adminPerDay: 200,
+  /** Backstop for paid plans, which are otherwise bounded by their credits. */
+  paidPerDay: 600,
   /** Site-wide estimated spend per UTC day across all models. AI pauses for everyone past it. */
   dailyBudgetUsd: 10,
   /** A person waits for one AI request to finish before starting another. */

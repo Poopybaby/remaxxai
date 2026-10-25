@@ -14,6 +14,16 @@ import { aiMessages, aiSessions } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
 import type { ModerationVerdict } from "@/lib/moderation";
 import {
+  applyEntries,
+  authorizeAiRequest,
+  estimateCredits,
+  getEntitlement,
+  refundAiRequest,
+  releaseStaleHolds,
+  settleAiRequest,
+  type Authorization,
+} from "@/lib/billing/credits";
+import {
   friendlyAiError,
   type AiImage,
   type AiMessage,
@@ -25,7 +35,10 @@ export type PipelineDeps = {
   db: Db;
   generate: (req: GenerateRequest) => Promise<GenerateResult>;
   moderate: (input: { texts?: string[]; imageDataUrls?: string[] }) => Promise<ModerationVerdict>;
-  rateLimit: (key: string) => Promise<{ success: boolean }>;
+  rateLimit: (
+    key: string,
+    rule: { limit: number; windowMs: number },
+  ) => Promise<{ success: boolean }>;
   accessMode: AiAccessMode;
   configuredProviders: ReadonlySet<ProviderId>;
   now?: () => Date;
@@ -56,6 +69,8 @@ export type PipelineFailure = {
     | "budget"
     | "busy"
     | "moderation"
+    | "model_locked"
+    | "no_credits"
     | "ai_failed";
   error: string;
 };
@@ -67,6 +82,9 @@ export type PipelineSuccess = {
   /** The ai_messages row for the reply; finish it with finishReply(). */
   replyId: string;
   sessionId: string | null;
+  /** How it was paid for. Pass to refundCharge() if the answer turns out unusable. */
+  payment: Extract<Authorization, { ok: true }>;
+  credits: { charged: number; balance: number; trialPrompts: number };
 };
 
 const fail = (status: number, code: PipelineFailure["code"], error: string): PipelineFailure => ({
@@ -154,7 +172,9 @@ export async function runAi(
     );
   }
 
-  if (!(await deps.rateLimit(viewer.userId)).success) {
+  const plan = await getEntitlement(db, viewer.userId, now);
+  const rule = { limit: plan.aiPerMinute, windowMs: AI_LIMITS.perMinute.windowMs };
+  if (!(await deps.rateLimit(`${viewer.userId}:${plan.plan?.id ?? "free"}`, rule)).success) {
     return fail(
       429,
       "rate_limited",
@@ -173,7 +193,12 @@ export async function runAi(
         gte(aiMessages.createdAt, dayStart),
       ),
     );
-  const dailyCap = isAdmin(viewer) ? AI_LIMITS.adminPerDay : AI_LIMITS.perDay;
+  // Paid plans are bounded by credits; the daily cap is a backstop against abuse.
+  const dailyCap = plan.plan
+    ? AI_LIMITS.paidPerDay
+    : isAdmin(viewer)
+      ? AI_LIMITS.adminPerDay
+      : AI_LIMITS.perDay;
   if ((mine?.n ?? 0) >= dailyCap) {
     return fail(
       429,
@@ -192,6 +217,8 @@ export async function runAi(
       "The AI editor is resting for today. It comes back at midnight UTC.",
     );
   }
+  // Requests that died mid-flight give their held credits back before we count what's running.
+  await releaseStaleHolds(db, viewer.userId, new Date(now.getTime() - AI_LIMITS.staleAfterMs));
   const [inFlight] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(aiMessages)
@@ -202,7 +229,7 @@ export async function runAi(
         gte(aiMessages.createdAt, new Date(now.getTime() - AI_LIMITS.staleAfterMs)),
       ),
     );
-  if ((inFlight?.n ?? 0) > 0) {
+  if ((inFlight?.n ?? 0) >= plan.aiConcurrent) {
     return fail(409, "busy", "Your last request is still running. Wait for it to finish.");
   }
 
@@ -249,6 +276,25 @@ export async function runAi(
   const replyId = reply!.id;
 
   const limits = AI_LIMITS[input.kind];
+  const inputChars =
+    input.system.length +
+    input.messages.reduce((n, m) => n + m.text.length + (m.images?.length ?? 0) * 3000, 0);
+  const estimate = estimateCredits(model, input.kind, inputChars, limits.maxOutputTokens);
+  const payment = await authorizeAiRequest(db, {
+    userId: viewer.userId,
+    model,
+    estimate,
+    replyId,
+    now,
+  });
+  if (!payment.ok) {
+    await db
+      .update(aiMessages)
+      .set({ status: "blocked", error: payment.code, content: payment.message })
+      .where(eq(aiMessages.id, replyId));
+    return fail(payment.code === "model_locked" ? 403 : 402, payment.code, payment.message);
+  }
+
   try {
     const result = await deps.generate({
       model,
@@ -262,8 +308,25 @@ export async function runAi(
       .update(aiMessages)
       .set({ inputTokens: result.inputTokens, outputTokens: result.outputTokens, costUsd })
       .where(eq(aiMessages.id, replyId));
-    return { ok: true, result, costUsd, replyId, sessionId };
+    const charged = await settleAiRequest(db, {
+      userId: viewer.userId,
+      replyId,
+      auth: payment,
+      costUsd,
+    });
+    const after = await getEntitlement(db, viewer.userId, now);
+    return {
+      ok: true,
+      result,
+      costUsd,
+      replyId,
+      sessionId,
+      payment,
+      credits: { charged, balance: after.balance, trialPrompts: after.trialPrompts },
+    };
   } catch (err) {
+    // Failed or timed out: nothing is charged (credits or free prompt come back).
+    await refundAiRequest(db, { userId: viewer.userId, replyId, auth: payment });
     const message = friendlyAiError(err, model.label);
     await db
       .update(aiMessages)
@@ -320,4 +383,35 @@ export async function usageToday(db: Db, now = new Date()) {
     .groupBy(aiMessages.modelId)
     .orderBy(asc(aiMessages.modelId));
   return rows;
+}
+
+/**
+ * Gives back what a successful call was charged, for answers that turned out unusable (cut off,
+ * or nothing applied). Keyed by the reply, so it can only happen once.
+ */
+export async function refundCharge(
+  db: Db,
+  userId: string,
+  replyId: string,
+  payment: Extract<Authorization, { ok: true }>,
+): Promise<void> {
+  if (payment.mode === "trial") {
+    await refundAiRequest(db, { userId, replyId, auth: payment });
+    return;
+  }
+  const [row] = await db
+    .select({ charged: aiMessages.creditsCharged })
+    .from(aiMessages)
+    .where(and(eq(aiMessages.id, replyId), eq(aiMessages.userId, userId)));
+  if (!row || row.charged <= 0) return;
+  await applyEntries(db, userId, [
+    {
+      delta: row.charged,
+      kind: "refund",
+      key: `refund:${replyId}`,
+      refType: "ai_message",
+      refId: replyId,
+    },
+  ]);
+  await db.update(aiMessages).set({ creditsCharged: 0 }).where(eq(aiMessages.id, replyId));
 }

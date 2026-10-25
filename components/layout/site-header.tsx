@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ButtonLink } from "@/components/ui/button";
+import { aiAccessMode } from "@/lib/ai/server";
+import { canUseAi } from "@/lib/auth/permissions";
 import { getViewerContext } from "@/lib/auth/viewer";
+import { readCredits } from "@/lib/billing/credits";
+import { getDb, isDbConfigured } from "@/lib/db/client";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -21,6 +25,12 @@ export function SiteHeader() {
               className="text-muted hover:bg-panel hover:text-fg rounded-lg px-2.5 py-1.5"
             >
               Explore
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-muted hover:bg-panel hover:text-fg rounded-lg px-2.5 py-1.5"
+            >
+              Pricing
             </Link>
           </nav>
         </div>
@@ -51,8 +61,26 @@ async function HeaderAccount() {
     );
   }
   const { profile } = viewer;
+  const role = { userId: viewer.userId, role: profile.role };
+  // Credits only mean something to people who can use AI.
+  const credits =
+    isDbConfigured() && canUseAi(role, aiAccessMode())
+      ? await readCredits(getDb(), viewer.userId)
+      : null;
   return (
     <>
+      {credits ? (
+        <Link
+          href="/billing"
+          className="border-line text-muted hover:text-fg hover:border-line-strong hidden h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold tabular-nums sm:inline-flex"
+          title="Credits for AI edits"
+        >
+          <span aria-hidden className="bg-cyan size-1.5 rounded-full" />
+          {credits.balance > 0 || credits.trialPrompts === 0
+            ? `${credits.balance.toLocaleString("en-US")} credits`
+            : `${credits.trialPrompts} free ${credits.trialPrompts === 1 ? "prompt" : "prompts"}`}
+        </Link>
+      ) : null}
       <ButtonLink href="/upload" size="sm" className="hidden sm:inline-flex">
         Upload
       </ButtonLink>

@@ -21,6 +21,10 @@ const serverSchema = z.object({
   DEEPSEEK_API_KEY: z.string().min(1).optional(),
   /** Who can use AI features before credits exist (Phase 5): "admins" (default) or "signed-in". */
   AI_ACCESS: z.enum(["admins", "signed-in"]).optional(),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  /** Live Stripe keys are refused unless this is "true" (test mode until the owner says otherwise). */
+  STRIPE_ALLOW_LIVE: z.enum(["true", "false"]).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -47,6 +51,10 @@ export function serverEnv(): ServerEnv {
     GOOGLE_GENERATIVE_AI_API_KEY: emptyToUndefined(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
     DEEPSEEK_API_KEY: emptyToUndefined(process.env.DEEPSEEK_API_KEY),
     AI_ACCESS: emptyToUndefined(process.env.AI_ACCESS) as "admins" | "signed-in" | undefined,
+    STRIPE_SECRET_KEY: emptyToUndefined(process.env.STRIPE_SECRET_KEY),
+    STRIPE_WEBHOOK_SECRET: emptyToUndefined(process.env.STRIPE_WEBHOOK_SECRET),
+    STRIPE_ALLOW_LIVE: emptyToUndefined(process.env.STRIPE_ALLOW_LIVE) as
+      "true" | "false" | undefined,
   });
   if (!parsed.success) {
     const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");

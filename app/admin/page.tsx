@@ -17,6 +17,10 @@ import { listOpenReports, listProjectsAwaitingReview } from "@/lib/moderation/ac
 import { indexStatus } from "@/lib/search/indexer";
 import { usageToday } from "@/lib/ai/pipeline";
 import { AI_LIMITS } from "@/config/limits";
+import { CREDIT_VALUE_USD } from "@/config/plans";
+import { spendSince } from "@/lib/billing/credits";
+import { stripeMode } from "@/lib/billing/stripe";
+import { AdjustCreditsForm } from "./adjust-credits";
 import { aiAccessMode, configuredProviders } from "@/lib/ai/server";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
@@ -58,7 +62,11 @@ async function Queues() {
     listProjectsAwaitingReview(db, viewer),
     indexStatus(db),
   ]);
-  const usage = await usageToday(db);
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const [usage, month] = await Promise.all([usageToday(db), spendSince(db, monthStart)]);
+  const billing = stripeMode();
   const spent = usage.reduce((sum, u) => sum + u.costUsd, 0);
   const aiOn = isOpenAiConfigured();
 
@@ -102,6 +110,37 @@ async function Queues() {
         ) : (
           <p className="text-faint text-sm">No AI requests yet today.</p>
         )}
+      </section>
+      <section
+        aria-labelledby="credits-heading"
+        className="border-line bg-panel flex flex-col gap-4 rounded-[var(--radius-card)] border p-5"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="credits-heading" className="text-xl font-bold">
+            Credits
+          </h2>
+          <p className="text-muted text-sm">
+            Stripe:{" "}
+            {billing === "off"
+              ? "not set up"
+              : billing === "live-blocked"
+                ? "live key refused (set STRIPE_ALLOW_LIVE=true to allow)"
+                : `${billing} mode`}
+          </p>
+        </div>
+        <p className="text-muted text-sm">
+          This month: {month.credits.toLocaleString("en-US")} credits charged (about $
+          {(month.credits * CREDIT_VALUE_USD).toFixed(2)}) against ${month.providerUsd.toFixed(2)}{" "}
+          estimated provider cost
+          {month.providerUsd > 0
+            ? ` (${((month.credits * CREDIT_VALUE_USD) / month.providerUsd).toFixed(1)}× markup; free prompts and admin use count as cost with no charge)`
+            : ""}
+          .
+        </p>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Add or remove credits</h3>
+          <AdjustCreditsForm />
+        </div>
       </section>
       <section
         aria-labelledby="search-heading"

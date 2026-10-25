@@ -4,6 +4,8 @@ import { siteConfig } from "@/config/site";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { projects } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env";
+import { aiAccessMode, configuredProviders } from "@/lib/ai/server";
+import { stripeMode } from "@/lib/billing/stripe";
 import { embedQuery, getEmbedder } from "@/lib/search/ai";
 import { supabasePublicConfig } from "@/lib/supabase/config";
 
@@ -66,9 +68,34 @@ export async function GET() {
       moderation: env.OPENAI_API_KEY ? "ok" : "off (optional for now)",
       vibeSearch: await checkVibeSearch(),
       rateLimitStore: env.UPSTASH_REDIS_REST_URL ? "ok" : "in-memory (optional for now)",
+      aiModels: aiModelsStatus(),
+      aiAccess:
+        aiAccessMode() === "admins" ? "admins only (AI_ACCESS=admins)" : "everyone signed in",
+      payments: paymentsStatus(env),
     },
     { headers: { "Cache-Control": "no-store" } },
   );
+}
+
+function aiModelsStatus(): string {
+  const on = [...configuredProviders()];
+  const missing = (["anthropic", "openai", "google", "deepseek"] as const).filter(
+    (p) => !on.includes(p),
+  );
+  if (!on.length) return "off: add at least one AI provider key (OPENAI_API_KEY to start)";
+  return missing.length
+    ? `ok: ${on.join(", ")} (not set up yet: ${missing.join(", ")})`
+    : `ok: ${on.join(", ")}`;
+}
+
+function paymentsStatus(env: ReturnType<typeof serverEnv>): string {
+  const mode = stripeMode();
+  if (mode === "off") return "off: add STRIPE_SECRET_KEY (test key, sk_test_...) to sell plans";
+  if (mode === "live-blocked")
+    return "refused: STRIPE_SECRET_KEY is a live key; use a test key, or set STRIPE_ALLOW_LIVE=true when you're ready";
+  if (!env.STRIPE_WEBHOOK_SECRET)
+    return `${mode} mode, but STRIPE_WEBHOOK_SECRET is missing: credits won't arrive after checkout`;
+  return `ok: ${mode} mode`;
 }
 
 /** Makes one real (tiny) embedding call so problems with the key or billing show up here. */

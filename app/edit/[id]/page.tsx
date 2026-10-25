@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { LICENSES } from "@/config/licenses";
 import { siteConfig } from "@/config/site";
 import { getOrCreateSession, sessionHistory } from "@/lib/ai/pipeline";
+import { getEntitlement } from "@/lib/billing/credits";
 import { aiAccessMode, modelOptions } from "@/lib/ai/server";
 import { canOpenInEditor, canUseAi } from "@/lib/auth/permissions";
 import { getViewerContext } from "@/lib/auth/viewer";
@@ -52,6 +53,7 @@ async function EditorLoader({ params }: Pick<PageProps<"/edit/[id]">, "params">)
     listVersions(db, viewer, project.id),
   ]);
   const aiAllowed = canUseAi(viewer, aiAccessMode());
+  const ent = await getEntitlement(db, viewer.userId);
 
   const data: EditorData = {
     project: {
@@ -78,6 +80,12 @@ async function EditorLoader({ params }: Pick<PageProps<"/edit/[id]">, "params">)
             : (h.status as "error" | "blocked"),
     })),
     models: modelOptions(),
+    credits: {
+      balance: ent.balance,
+      trialPrompts: ent.trialPrompts,
+      planName: ent.plan?.name ?? null,
+      modelTier: ent.modelTier,
+    },
     ai: aiAllowed
       ? { allowed: true }
       : {

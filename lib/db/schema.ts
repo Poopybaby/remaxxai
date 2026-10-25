@@ -358,6 +358,8 @@ export const aiMessages = pgTable("ai_messages", {
   costUsd: numeric("cost_usd", { precision: 12, scale: 6, mode: "number" }).notNull().default(0),
   imageCount: integer("image_count").notNull().default(0),
   resultVersionId: uuid("result_version_id"),
+  creditsCharged: integer("credits_charged").notNull().default(0),
+  usedTrial: boolean("used_trial").notNull().default(false),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -372,3 +374,56 @@ export const explanations = pgTable(
   },
   (t) => [primaryKey({ columns: [t.versionId, t.modelId] })],
 );
+
+// ── Phase 5: credits and subscriptions ────────────────────────────────────────
+
+export const LEDGER_KINDS = [
+  "trial_grant",
+  "subscription_grant",
+  "topup",
+  "hold",
+  "release",
+  "spend",
+  "refund",
+  "expiry",
+  "admin_adjust",
+] as const;
+export type LedgerKind = (typeof LEDGER_KINDS)[number];
+
+export const creditAccounts = pgTable("credit_accounts", {
+  userId: uuid("user_id").primaryKey(),
+  balance: integer("balance").notNull().default(0),
+  trialPrompts: integer("trial_prompts").notNull().default(0),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const creditLedger = pgTable("credit_ledger", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  delta: integer("delta").notNull(),
+  kind: text("kind", { enum: LEDGER_KINDS }).notNull(),
+  refType: text("ref_type"),
+  refId: text("ref_id"),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  meta: jsonb("meta").notNull().default({}),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  userId: uuid("user_id").primaryKey(),
+  stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  planId: text("plan_id"),
+  status: text("status").notNull().default("none"),
+  currentPeriodStart: ts("current_period_start"),
+  currentPeriodEnd: ts("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  creditedPlanId: text("credited_plan_id"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  processedAt: ts("processed_at").notNull().defaultNow(),
+});

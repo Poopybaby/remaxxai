@@ -1,5 +1,4 @@
 import "server-only";
-import { AI_LIMITS } from "@/config/limits";
 import { MODELS, type ModelEntry, type ProviderId } from "@/config/models";
 import { getDb } from "@/lib/db/client";
 import { serverEnv } from "@/lib/env";
@@ -25,7 +24,10 @@ export function configuredProviders(): Set<ProviderId> {
 }
 
 /** What the model picker shows: every model, and whether it's usable on this deployment. */
-export function modelOptions(): (Pick<ModelEntry, "id" | "label" | "vision" | "blurb" | "tier"> & {
+export function modelOptions(): (Pick<
+  ModelEntry,
+  "id" | "label" | "vision" | "blurb" | "tier" | "inputPerMTok" | "outputPerMTok"
+> & {
   available: boolean;
 })[] {
   const ready = configuredProviders();
@@ -35,6 +37,8 @@ export function modelOptions(): (Pick<ModelEntry, "id" | "label" | "vision" | "b
     vision: m.vision,
     blurb: m.blurb,
     tier: m.tier,
+    inputPerMTok: m.inputPerMTok,
+    outputPerMTok: m.outputPerMTok,
     available: ready.has(m.provider),
   }));
 }
@@ -66,7 +70,7 @@ export function productionAiDeps(): PipelineDeps {
     generate: (req) =>
       generate(req, { fetch, keys: providerKeys(), openaiBaseUrl: env.OPENAI_BASE_URL }),
     moderate,
-    rateLimit: (key) => rateLimit("ai", key, AI_LIMITS.perMinute),
+    rateLimit: (key, rule) => rateLimit("ai", key, rule),
     accessMode: aiAccessMode(),
     configuredProviders: configuredProviders(),
   };

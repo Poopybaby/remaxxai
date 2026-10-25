@@ -176,9 +176,9 @@ export async function createProject(db: Db, input: CreateProjectInput): Promise<
   throw new Error("Couldn't create a unique link for this project");
 }
 
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
-async function attachTags(tx: Tx, projectId: string, styles: string[], topics: string[]) {
+export async function attachTags(tx: Tx, projectId: string, styles: string[], topics: string[]) {
   const wanted = [
     ...styles.map((slug) => ({ slug, kind: "style" as const })),
     ...topics

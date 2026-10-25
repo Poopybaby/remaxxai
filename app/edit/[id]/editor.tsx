@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CodeEditor } from "@/components/editor/code-editor";
 import { LivePreview } from "@/components/editor/live-preview";
@@ -8,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import type { FileChange } from "@/lib/ai/edit-protocol";
 import type { EditorFile, VersionSummary } from "@/lib/projects/versions";
 import { cn } from "@/lib/utils/cn";
-import { ChatPanel, type ChatItem, type ModelOption, type Proposal } from "./chat-panel";
+import {
+  ChatPanel,
+  type ChatItem,
+  type Credits,
+  type ModelOption,
+  type Proposal,
+} from "./chat-panel";
 import { ExplainDrawer, HistoryDrawer } from "./drawers";
 import { FileTree } from "./file-tree";
 
@@ -19,6 +26,7 @@ export type EditorData = {
   files: EditorFile[];
   history: ChatItem[];
   models: ModelOption[];
+  credits: Credits;
   ai: { allowed: true } | { allowed: false; reason: string };
   previewOrigin: string;
 };
@@ -53,6 +61,7 @@ async function postJson<T>(
 }
 
 export function Editor({ data }: { data: EditorData }) {
+  const router = useRouter();
   const { project } = data;
   const [saved, setSaved] = useState<Saved>({
     versionId: data.version.id,
@@ -72,6 +81,7 @@ export function Editor({ data }: { data: EditorData }) {
   const [notice, setNotice] = useState<{ kind: "error" | "info"; text: string } | null>(null);
   const [drawer, setDrawer] = useState<null | "history" | "explain">(null);
   const [versions, setVersions] = useState<VersionSummary[] | null>(null);
+  const [credits, setCredits] = useState<Credits>(data.credits);
 
   const binaries = useMemo(() => saved.files.filter((f) => f.text === null), [saved.files]);
   const savedText = useMemo(() => textOf(saved.files), [saved.files]);
@@ -174,6 +184,13 @@ export function Editor({ data }: { data: EditorData }) {
     return res.data.changed ? res.data.version.id : saved.versionId;
   }
 
+  /** Publishing uses the latest saved version, so unsaved edits are saved first. */
+  async function goPublish() {
+    if (busy) return;
+    if (dirty && !(await save(text, "Edited by hand", "user"))) return;
+    router.push(`/edit/${project.id}/publish`);
+  }
+
   async function saveByHand() {
     if (!dirty || busy) return;
     const id = await save(text, "Edited by hand", "user");
@@ -208,6 +225,7 @@ export function Editor({ data }: { data: EditorData }) {
       summary: string;
       changes: FileChange[];
       problems: string[];
+      credits?: { balance: number; trialPrompts: number };
     }>(`/api/editor/${project.id}/ai`, {
       baseVersionId: saved.versionId,
       files: text,
@@ -224,6 +242,10 @@ export function Editor({ data }: { data: EditorData }) {
       return;
     }
     const { replyId, summary, changes, problems } = res.data;
+    if (res.data.credits) {
+      const c = res.data.credits;
+      setCredits((cur) => ({ ...cur, balance: c.balance, trialPrompts: c.trialPrompts }));
+    }
     if (changes.length === 0) {
       setChat((c) => [
         ...c,
@@ -462,12 +484,15 @@ export function Editor({ data }: { data: EditorData }) {
           </Button>
           <Button
             size="sm"
-            variant={dirty ? "primary" : "ghost"}
+            variant={dirty ? "secondary" : "ghost"}
             onClick={saveByHand}
             disabled={!dirty || busy !== null}
             title="Save (Ctrl/Cmd + S)"
           >
             {busy === "save" ? "Saving…" : dirty ? "Save" : "Saved"}
+          </Button>
+          <Button size="sm" onClick={() => void goPublish()} disabled={busy !== null}>
+            Publish
           </Button>
         </div>
       </header>
@@ -483,6 +508,8 @@ export function Editor({ data }: { data: EditorData }) {
             items={chat}
             proposal={proposal}
             models={data.models}
+            credits={credits}
+            inputChars={Object.values(text).reduce((n, t) => n + t.length, 0)}
             ai={data.ai}
             busy={busy}
             onAsk={ask}

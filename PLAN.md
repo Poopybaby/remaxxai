@@ -143,7 +143,7 @@ Users live in Supabase's `auth.users`; everything else is ours. All app tables h
 AI edits come back as structured file changes (validated with Zod), shown as per-file diffs. Accept → new `project_version`. Undo → restore any previous version.
 
 Credits formula (all knobs in `config/plans.ts`):
-`credits = ceil(provider_cost_usd × markup / credit_value_usd)` — placeholder markup 2.5×, 1 credit = $0.01. I'll produce a "cost per typical prompt by model" table in Phase 5 once current model prices are pinned.
+`credits = ceil(provider_cost_usd × markup / credit_value_usd)` — placeholder markup 2.5×, 1 credit = $0.01. See the cost-per-request table in the Phase 5 build notes.
 
 ---
 
@@ -204,11 +204,12 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 5 — Publish & Credits**
 
-- [ ] Publish remix with auto credit chain + license guard
-- [ ] Ledger, holds, settlement, balance display, pre-action cost estimate, hard stop
-- [ ] Free trial prompts, paywall, Stripe Checkout + Portal + webhooks (test mode), monthly grants
-- [ ] Tier → model access enforcement; Power tier gets higher rate limits/concurrency
-- [ ] Tests: ledger invariant, concurrent spends, webhook idempotency, refund on failure, tier gating
+- [x] Publish remix with auto credit chain + license guard
+- [x] Ledger, holds, settlement, balance display, pre-action cost estimate, hard stop
+- [x] Free trial prompts, paywall, Stripe Checkout + Portal + webhooks (test mode), monthly grants
+- [x] Tier → model access enforcement; Power tier gets higher rate limits/concurrency
+- [x] Tests: ledger invariant, concurrent spends, webhook idempotency, refund on failure, tier gating
+- [ ] **Follow-up (D'vaunte, this weekend): turn on the other AI models.** Add `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` and `DEEPSEEK_API_KEY` in Vercel and redeploy; `/api/health` → `aiModels` lists which providers are on. Before relying on them, check the Gemini and DeepSeek model IDs and prices in `config/models.ts` against each provider's own pricing page (they came from third-party summaries), then try one edit per model in the editor. Only OpenAI is set up today, so the picker shows the others as "not set up".
 
 **Phase 6 — Polish & Launch**
 
@@ -240,6 +241,26 @@ Credits formula (all knobs in `config/plans.ts`):
 - Model IDs and prices for Google and DeepSeek come from third-party summaries (October 2026); check each provider's pricing page before Phase 5 turns costs into credits.
 - Remix counts now include published remixes only (recounted by trigger when status changes).
 
+**Phase 5 build notes:**
+
+- Typical cost per AI request at 2.5× markup (from `config/models.ts` prices; actual charges are often lower because they use real token counts):
+
+| Model             | Plan     | Small edit (~8 KB project) | Large edit (~40 KB) | Break it down | Small edits per month on Starter / Pro |
+| ----------------- | -------- | -------------------------- | ------------------- | ------------- | -------------------------------------- |
+| DeepSeek          | Starter+ | 2                          | 2                   | 1             | ~300 / ~900                            |
+| Claude Haiku      | Starter+ | 2                          | 4                   | 2             | ~300 / ~900                            |
+| Gemini Flash      | Starter+ | 3                          | 5                   | 3             | ~200 / ~600                            |
+| ChatGPT mini      | Starter+ | 4                          | 6                   | 3             | ~150 / ~450                            |
+| Claude Sonnet     | Pro+     | 8                          | 13                  | 6             | — / ~225                               |
+| Gemini Pro        | Pro+     | 10                         | 14                  | 7             | — / ~180                               |
+| ChatGPT (GPT-5.5) | Pro+     | 24                         | 35                  | 16            | — / ~75                                |
+
+- Holds cover the worst case (the model's full output limit); the person is only charged the actual cost. If the balance can pay the typical cost but not the worst case, the hold is capped at the balance, so nobody is blocked by an unlikely maximum.
+- Plans are only sold to people who can use AI. While `AI_ACCESS=admins`, only admins can check out, which keeps test-mode Stripe from unlocking real AI spend for anyone.
+- Stripe products and prices are created from `config/plans.ts` on first checkout (lookup key `remaxx_<plan>_monthly_v<priceVersion>`), so there are no price IDs to copy. The publishable key isn't needed: checkout and billing management use Stripe's hosted pages.
+- Publishing a remix uses the same hourly limit as uploads and the same scanner and moderation; flagged remixes are held for review.
+- Credits are charged for "Break it down" only when a version hasn't been explained yet; cached explanations are free.
+
 ---
 
 ## 7. Keys you'll need to supply (by phase)
@@ -250,7 +271,7 @@ Credits formula (all knobs in `config/plans.ts`):
 | 2     | `NEXT_PUBLIC_PREVIEW_ORIGIN` (the second domain)                                                                                                                                                    |
 | 3     | `OPENAI_API_KEY` (embeddings + moderation)                                                                                                                                                          |
 | 4     | `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `DEEPSEEK_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                       |
-| 5     | `STRIPE_SECRET_KEY` (test), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, Stripe price IDs                                                                                         |
+| 5     | `STRIPE_SECRET_KEY` (test, `sk_test_...`), `STRIPE_WEBHOOK_SECRET` (`whsec_...`). Later: the remaining Phase 4 model keys (see the Phase 5 follow-up)                                               |
 | 6     | `SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_KEY`                                                                                                                                                             |
 
 Until keys arrive I can build and test everything against PGlite and mocked providers.
@@ -259,7 +280,7 @@ Until keys arrive I can build and test everything against PGlite and mocked prov
 
 ## 8. Questions (expensive to undo)
 
-**All decided Oct 21, 2026.** Plan approved. Phases 1–2 complete.
+**All decided Oct 21, 2026.** Plan approved. Phases 1–5 complete.
 
 **Q1. Auth provider — DECIDED:** Supabase Auth.
 
