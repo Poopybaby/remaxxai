@@ -67,6 +67,7 @@ describe("first-time setup SQL", () => {
       "0003_vibe_search.sql",
       "0004_editor.sql",
       "0005_credits.sql",
+      "0006_notifications.sql",
     ]);
 
     // Old table kept under a new name; tasks still works with its own set_updated_at.
@@ -89,7 +90,7 @@ describe("first-time setup SQL", () => {
     const db = await freshDb(STARTER_TEMPLATE);
     // Phase 2's setup: the same script, minus the newer migrations.
     const phase2 = (await buildSetupSql()).replace(
-      /-- 0003_vibe_search\.sql[\s\S]*?-- 0005_credits\.sql[\s\S]*?\$setup\$;\n/,
+      /-- 0003_vibe_search\.sql[\s\S]*?-- 0006_notifications\.sql[\s\S]*?\$setup\$;\n/,
       "",
     );
     expect(phase2).not.toContain("create table project_search");
@@ -110,7 +111,10 @@ describe("first-time setup SQL", () => {
 
   it("upgrades a Phase 4 project: everyone who already signed up gets their free prompts", async () => {
     const db = await freshDb(STARTER_TEMPLATE);
-    const phase4 = (await buildSetupSql()).replace(/-- 0005_credits\.sql[\s\S]*?\$setup\$;\n/, "");
+    const phase4 = (await buildSetupSql()).replace(
+      /-- 0005_credits\.sql[\s\S]*?-- 0006_notifications\.sql[\s\S]*?\$setup\$;\n/,
+      "",
+    );
     expect(phase4).not.toContain("create table credit_ledger");
     await db.exec(phase4);
     await db.exec(await buildSeedSql());

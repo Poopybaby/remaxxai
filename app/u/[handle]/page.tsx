@@ -47,6 +47,14 @@ async function ProfileContent({ params }: Pick<PageProps<"/u/[handle]">, "params
       : Promise.resolve(false),
   ]);
   const statuses = new Map<string, ProjectStatus>(projects.map((p) => [p.id, p.status]));
+  const live = projects.filter((p) => p.status === "published");
+  const stats = {
+    templates: live.length,
+    likes: live.reduce((n, p) => n + p.likeCount, 0),
+    remixed: live.reduce((n, p) => n + p.remixCount, 0),
+  };
+  const originals = projects.filter((p) => !p.isRemix);
+  const remixes = projects.filter((p) => p.isRemix);
 
   const joined = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
     new Date(profile.joinedAt),
@@ -98,8 +106,11 @@ async function ProfileContent({ params }: Pick<PageProps<"/u/[handle]">, "params
             <Link href="/settings" className={buttonClasses("secondary", "sm")}>
               Edit profile
             </Link>
-            <Link href="/upload" className={buttonClasses("primary", "sm")}>
+            <Link href="/upload" className={buttonClasses("secondary", "sm")}>
               Upload
+            </Link>
+            <Link href="/create" className={buttonClasses("primary", "sm")}>
+              Create
             </Link>
           </div>
         ) : (
@@ -113,19 +124,51 @@ async function ProfileContent({ params }: Pick<PageProps<"/u/[handle]">, "params
         )}
       </header>
 
+      {stats.templates ? (
+        <dl className="grid grid-cols-3 gap-3 sm:max-w-xl">
+          {[
+            { label: stats.templates === 1 ? "Template" : "Templates", value: stats.templates },
+            { label: stats.likes === 1 ? "Like" : "Likes", value: stats.likes },
+            { label: "Times remixed", value: stats.remixed },
+          ].map((x) => (
+            <div key={x.label} className="border-line bg-panel rounded-[var(--radius-control)] border px-4 py-3">
+              <dt className="text-faint text-xs">{x.label}</dt>
+              <dd className="text-fg text-2xl font-black tabular-nums">{x.value.toLocaleString("en-US")}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
       {projects.length ? (
-        <ProjectGrid cards={projects} statuses={isOwner ? statuses : undefined} />
+        <div className="flex flex-col gap-10">
+          {originals.length ? (
+            <section aria-labelledby="originals-heading" className="flex flex-col gap-4">
+              <h2 id="originals-heading" className="text-xl font-bold">
+                Templates
+              </h2>
+              <ProjectGrid cards={originals} statuses={isOwner ? statuses : undefined} />
+            </section>
+          ) : null}
+          {remixes.length ? (
+            <section aria-labelledby="remixes-heading" className="flex flex-col gap-4">
+              <h2 id="remixes-heading" className="text-xl font-bold">
+                Remixes
+              </h2>
+              <ProjectGrid cards={remixes} statuses={isOwner ? statuses : undefined} />
+            </section>
+          ) : null}
+        </div>
       ) : (
         <div className="border-line-strong flex min-h-56 flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed p-8 text-center">
-          <p className="text-fg font-semibold">No templates yet</p>
+          <p className="text-fg font-semibold">Nothing shared yet</p>
           <p className="text-muted max-w-[44ch] text-sm">
             {isOwner
-              ? "Upload your first template so others can remix it."
+              ? "Create something, upload a template or publish a remix, and it shows up here."
               : `@${profile.handle} hasn't shared anything yet.`}
           </p>
           {isOwner ? (
-            <Link href="/upload" className={buttonClasses("secondary", "sm", "mt-2")}>
-              Upload a template
+            <Link href="/create" className={buttonClasses("secondary", "sm", "mt-2")}>
+              Create something
             </Link>
           ) : null}
         </div>

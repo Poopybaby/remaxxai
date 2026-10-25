@@ -427,3 +427,17 @@ export const stripeEvents = pgTable("stripe_events", {
   type: text("type").notNull(),
   processedAt: ts("processed_at").notNull().defaultNow(),
 });
+
+export const NOTIFICATION_KINDS = ["like", "follow", "remix", "approved", "removed"] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recipientId: uuid("recipient_id").notNull(),
+  kind: text("kind", { enum: NOTIFICATION_KINDS }).notNull(),
+  actorId: uuid("actor_id"),
+  projectId: uuid("project_id"),
+  meta: jsonb("meta").notNull().default({}),
+  readAt: ts("read_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});

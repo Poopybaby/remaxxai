@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { MODELS } from "@/config/models";
+import { AI_LIMITS } from "@/config/limits";
+import { modelOptions } from "@/lib/ai/server";
+import { estimateCredits } from "@/lib/billing/estimate";
 import { CREDIT_VALUE_USD, FREE_TRIAL_PROMPTS, PLAN_ORDER, PLANS } from "@/config/plans";
 import { getEntitlement } from "@/lib/billing/credits";
 import { salesState } from "@/lib/billing/sales";
@@ -138,10 +140,9 @@ function PlanGrid({
 }
 
 function HowCreditsWork() {
-  // The top-tier models, from config, so this stays right as models change.
-  const examples = Object.values(MODELS)
-    .filter((m) => m.tier === "pro")
-    .map((m) => m.label);
+  // Only the models switched on for this site, so the page never promises one that isn't there.
+  const live = modelOptions().filter((m) => m.available);
+  const top = live.filter((m) => m.tier === "pro").map((m) => m.label);
   return (
     <section
       aria-labelledby="how-heading"
@@ -154,8 +155,11 @@ function HowCreditsWork() {
         <h3 className="font-semibold">Pay for what you use</h3>
         <p className="text-muted text-sm">
           Each AI request costs credits based on the model and how much it reads and writes. You see
-          the estimate before you send. Top models ({examples.join(", ")}) cost more per request and
-          need Pro or Power. One credit is worth ${CREDIT_VALUE_USD.toFixed(2)}.
+          the estimate before you send.
+          {top.length
+            ? ` Top models (${top.join(", ")}) cost more per request and need Pro or Power.`
+            : ""}{" "}
+          One credit is worth ${CREDIT_VALUE_USD.toFixed(2)}.
         </p>
       </div>
       <div className="flex flex-col gap-2">
@@ -172,6 +176,31 @@ function HowCreditsWork() {
           and you get the difference right away. Cancel from your billing page.
         </p>
       </div>
+      {live.length ? (
+        <div className="flex flex-col gap-3 md:col-span-3">
+          <h3 className="font-semibold">Models available now</h3>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {live.map((m) => (
+              <li
+                key={m.id}
+                className="border-line bg-panel flex items-center justify-between gap-3 rounded-[var(--radius-control)] border px-4 py-3 text-sm"
+              >
+                <span className="flex flex-col">
+                  <span className="text-fg font-semibold">{m.label}</span>
+                  <span className="text-faint">
+                    {m.tier === "pro" ? "Pro and Power" : "Every plan"}
+                  </span>
+                </span>
+                <span className="text-muted text-right tabular-nums">
+                  ~{estimateCredits(m, "edit", 8000, AI_LIMITS.edit.maxOutputTokens).typical}{" "}
+                  credits
+                  <span className="text-faint block text-xs">per small edit</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

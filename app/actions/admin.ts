@@ -7,7 +7,12 @@ import { getViewer } from "@/lib/auth/viewer";
 import { adminAdjustCredits } from "@/lib/billing/credits";
 import { getDb } from "@/lib/db/client";
 import { getProfileByHandle } from "@/lib/profiles";
-import { approveProject, dismissReport, removeProject } from "@/lib/moderation/actions";
+import {
+  approveProject,
+  dismissReport,
+  removeProject,
+  setStaffPick,
+} from "@/lib/moderation/actions";
 import { refreshSearchIndex } from "@/lib/search/background";
 
 const UUID = /^[0-9a-f-]{36}$/;
@@ -101,4 +106,11 @@ export async function adjustCreditsAction(
       error: true,
     };
   }
+}
+
+export async function setStaffPickAction(form: FormData): Promise<void> {
+  const projectId = id(form, "projectId");
+  if (!projectId) return;
+  await setStaffPick(getDb(), await getViewer(), projectId, form.get("on") === "true");
+  refresh();
 }

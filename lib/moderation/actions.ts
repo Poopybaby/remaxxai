@@ -7,7 +7,7 @@
  */
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { canModerate, canSetOwnVisibility, type Viewer } from "@/lib/auth/permissions";
+import { assert, canModerate, canSetOwnVisibility, type Viewer } from "@/lib/auth/permissions";
 import {
   adminAuditLog,
   moderationEvents,
@@ -18,6 +18,7 @@ import {
   type ProjectStatus,
 } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
+import { notifyReviewOutcome } from "@/lib/notifications";
 import { getDescendantIds, type DbLike } from "@/lib/licensing/chain";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -210,8 +211,18 @@ export async function removeProject(
           (opts.copyright ? "Removed after a copyright notice." : "Removed by an admin."),
       })
       .where(eq(projects.id, projectId))
-      .returning({ id: projects.id });
+      .returning({
+        id: projects.id,
+        ownerId: projects.ownerId,
+        statusReason: projects.statusReason,
+      });
     if (!project) return { ok: false as const, error: "Project not found." };
+    await notifyReviewOutcome(tx, {
+      recipientId: project.ownerId,
+      projectId,
+      kind: "removed",
+      note: project.statusReason ?? undefined,
+    });
 
     let hidden = 0;
     if (opts.copyright) {
@@ -260,7 +271,11 @@ export async function approveProject(
   if (!viewer || !canModerate(viewer))
     return { ok: false, error: "Only admins can approve projects." };
   const [current] = await db
-    .select({ status: projects.status, publishedAt: projects.publishedAt })
+    .select({
+      status: projects.status,
+      publishedAt: projects.publishedAt,
+      ownerId: projects.ownerId,
+    })
     .from(projects)
     .where(eq(projects.id, projectId));
   if (!current) return { ok: false, error: "Project not found." };
@@ -277,6 +292,7 @@ export async function approveProject(
     })
     .where(eq(projects.id, projectId));
   await audit(db, viewer.userId, "approve", projectId, { from: current.status, note });
+  await notifyReviewOutcome(db, { recipientId: current.ownerId, projectId, kind: "approved" });
   return { ok: true };
 }
 
@@ -334,4 +350,18 @@ export async function setOwnProjectVisibility(
     })
     .where(eq(projects.id, projectId));
   return { ok: true };
+}
+
+/** Admins feature standout published projects in the Staff picks feed. */
+export async function setStaffPick(
+  db: Db,
+  viewer: Viewer,
+  projectId: string,
+  on: boolean,
+): Promise<void> {
+  assert(canModerate(viewer), "Only admins can choose staff picks.");
+  await db
+    .update(projects)
+    .set({ isStaffPick: on })
+    .where(and(eq(projects.id, projectId), eq(projects.status, "published")));
 }

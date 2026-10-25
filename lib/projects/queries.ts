@@ -32,8 +32,31 @@ export type ProjectCard = {
   likeCount: number;
   remixCount: number;
   isRemix: boolean;
+  isStaffPick: boolean;
   owner: { handle: string; displayName: string; avatarUrl: string | null };
 };
+
+export const EXPLORE_SORTS = ["trending", "new", "popular", "picks"] as const;
+export type ExploreSort = (typeof EXPLORE_SORTS)[number];
+export const isExploreSort = (v: unknown): v is ExploreSort =>
+  typeof v === "string" && (EXPLORE_SORTS as readonly string[]).includes(v);
+
+/**
+ * Trending: engagement (remixes count most, then saves, then likes) decayed by age, so new
+ * activity rises and older projects settle. Same idea as Hacker News ranking. Kept in SQL so a
+ * page of results is one query; `trendingScore` below mirrors it for tests.
+ */
+const trendingSql = sql`(${projects.likeCount} + 2 * ${projects.saveCount} + 3 * ${projects.remixCount} + 1)
+  / power(extract(epoch from (now() - coalesce(${projects.publishedAt}, ${projects.createdAt}))) / 3600 + 2, 1.5)`;
+
+export function trendingScore(p: {
+  likes: number;
+  saves: number;
+  remixes: number;
+  ageHours: number;
+}): number {
+  return (p.likes + 2 * p.saves + 3 * p.remixes + 1) / Math.pow(Math.max(0, p.ageHours) + 2, 1.5);
+}
 
 export type ExploreFilters = {
   q?: string;
@@ -41,7 +64,8 @@ export type ExploreFilters = {
   tool?: string;
   license?: string;
   style?: string;
-  sort?: "new" | "popular";
+  /** Browsing order. Search results are ordered by match instead. */
+  sort?: ExploreSort;
   page?: number;
 };
 
@@ -55,6 +79,7 @@ const cardColumns = {
   licenseId: projects.licenseId,
   likeCount: projects.likeCount,
   remixCount: projects.remixCount,
+  isStaffPick: projects.isStaffPick,
   parentProjectId: projects.parentProjectId,
   ownerHandle: profiles.handle,
   ownerName: profiles.displayName,
@@ -71,6 +96,7 @@ type CardRow = {
   licenseId: string;
   likeCount: number;
   remixCount: number;
+  isStaffPick: boolean;
   parentProjectId: string | null;
   ownerHandle: string;
   ownerName: string;
@@ -89,6 +115,7 @@ function toCard(r: CardRow): ProjectCard {
     likeCount: r.likeCount,
     remixCount: r.remixCount,
     isRemix: r.parentProjectId !== null,
+    isStaffPick: r.isStaffPick,
     owner: { handle: r.ownerHandle, displayName: r.ownerName, avatarUrl: r.ownerAvatar },
   };
 }
@@ -148,10 +175,13 @@ export async function listPublishedProjects(
   }
 
   const page = Math.max(1, Math.min(filters.page ?? 1, 100));
+  if (filters.sort === "picks") conditions.push(eq(projects.isStaffPick, true));
   const order =
     filters.sort === "popular"
       ? [desc(projects.likeCount), desc(projects.remixCount), desc(projects.publishedAt)]
-      : [desc(projects.publishedAt), desc(projects.id)];
+      : filters.sort === "trending"
+        ? [desc(trendingSql), desc(projects.publishedAt), desc(projects.id)]
+        : [desc(projects.publishedAt), desc(projects.id)];
 
   const rows = await db
     .select(cardColumns)
@@ -221,6 +251,7 @@ export type ProjectDetail = {
   likeCount: number;
   saveCount: number;
   remixCount: number;
+  isStaffPick: boolean;
   publishedAt: Date | null;
   createdAt: Date;
   owner: { id: string; handle: string; displayName: string; avatarUrl: string | null };
@@ -271,6 +302,7 @@ export async function getProjectBySlug(db: Db, slug: string): Promise<ProjectDet
     likeCount: p.likeCount,
     saveCount: p.saveCount,
     remixCount: p.remixCount,
+    isStaffPick: p.isStaffPick,
     publishedAt: p.publishedAt,
     createdAt: p.createdAt,
     owner: {

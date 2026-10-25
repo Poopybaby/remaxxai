@@ -23,7 +23,7 @@ export function configuredProviders(): Set<ProviderId> {
   return new Set((Object.keys(keys) as ProviderId[]).filter((p) => Boolean(keys[p])));
 }
 
-/** What the model picker shows: every model, and whether it's usable on this deployment. */
+/** What the model picker shows: the models whose provider is set up on this deployment. */
 export function modelOptions(): (Pick<
   ModelEntry,
   "id" | "label" | "vision" | "blurb" | "tier" | "inputPerMTok" | "outputPerMTok"
@@ -31,7 +31,10 @@ export function modelOptions(): (Pick<
   available: boolean;
 })[] {
   const ready = configuredProviders();
-  return (MODELS as readonly ModelEntry[]).map((m) => ({
+  const all = MODELS as readonly ModelEntry[];
+  // Only offer what works. With no provider set up at all, list everything as unavailable.
+  const shown = ready.size ? all.filter((m) => ready.has(m.provider)) : all;
+  return shown.map((m) => ({
     id: m.id,
     label: m.label,
     vision: m.vision,

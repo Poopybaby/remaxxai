@@ -55,7 +55,7 @@ export const PLANS: Record<PlanId, Plan> = {
     blurb: "Every model, including the top ones.",
     features: [
       "1,800 credits a month",
-      "Every model: Claude, GPT, Gemini, DeepSeek",
+      "Every model, including the top ones",
       "Publish unlimited remixes",
     ],
     priceVersion: 1,

@@ -76,26 +76,8 @@ export function ExploreControls({ filters }: { filters: ExploreFilters }) {
             options={LICENSE_IDS.map((id) => ({ id, label: LICENSES[id].shortName }))}
             onChange={() => apply()}
           />
-          {/* Search results are ordered by how well they match, so sorting only applies to browsing. */}
-          {filters.q ? (
-            <input type="hidden" name="sort" value={filters.sort ?? "new"} />
-          ) : (
-            <div className="md:w-36">
-              <label htmlFor="sort" className="sr-only">
-                Sort
-              </label>
-              <Select
-                id="sort"
-                name="sort"
-                defaultValue={filters.sort ?? "new"}
-                onChange={() => apply()}
-                className="h-12"
-              >
-                <option value="new">Newest</option>
-                <option value="popular">Most liked</option>
-              </Select>
-            </div>
-          )}
+          {/* The feed tabs above set the order; keep it when filters change. */}
+          <input type="hidden" name="sort" value={filters.sort ?? "trending"} />
         </div>
       </div>
       <input type="hidden" name="style" value={filters.style ?? ""} />

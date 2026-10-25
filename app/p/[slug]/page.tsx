@@ -11,6 +11,7 @@ import {
 } from "@/components/project/project-actions";
 import { BreakItDown } from "@/components/project/break-it-down";
 import { PreviewPanel } from "@/components/project/preview-panel";
+import { setStaffPickAction } from "@/app/actions/admin";
 import { RemixButton } from "@/components/project/remix-button";
 import { ButtonLink } from "@/components/ui/button";
 import { getCachedExplanation } from "@/lib/ai/services";
@@ -19,7 +20,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { LICENSES } from "@/config/licenses";
 import { siteConfig } from "@/config/site";
 import { CATEGORIES, labelFor, STYLES, TOOLS } from "@/config/taxonomy";
-import { canRemix, canViewProject } from "@/lib/auth/permissions";
+import { canModerate, canRemix, canViewProject } from "@/lib/auth/permissions";
 import { getViewer } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import type { ProjectStatus } from "@/lib/db/schema";
@@ -266,7 +267,21 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
             ) : (
               <span />
             )}
-            {!isOwner ? <ReportButton projectId={project.id} signedIn={Boolean(viewer)} /> : null}
+            <span className="flex items-center gap-3">
+              {published && canModerate(viewer) ? (
+                <form action={setStaffPickAction}>
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input type="hidden" name="on" value={String(!project.isStaffPick)} />
+                  <button
+                    type="submit"
+                    className="text-muted hover:text-fg text-sm underline underline-offset-4"
+                  >
+                    {project.isStaffPick ? "Remove staff pick" : "Make staff pick"}
+                  </button>
+                </form>
+              ) : null}
+              {!isOwner ? <ReportButton projectId={project.id} signedIn={Boolean(viewer)} /> : null}
+            </span>
           </div>
         </aside>
       </div>

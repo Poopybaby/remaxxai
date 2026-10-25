@@ -6,6 +6,7 @@ import { aiAccessMode } from "@/lib/ai/server";
 import { canUseAi } from "@/lib/auth/permissions";
 import { getViewerContext } from "@/lib/auth/viewer";
 import { readCredits } from "@/lib/billing/credits";
+import { unreadCount } from "@/lib/notifications";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { UserMenu } from "./user-menu";
 
@@ -64,10 +65,11 @@ async function HeaderAccount() {
   const { profile } = viewer;
   const role = { userId: viewer.userId, role: profile.role };
   // Credits only mean something to people who can use AI.
-  const credits =
-    isDbConfigured() && canUseAi(role, aiAccessMode())
-      ? await readCredits(getDb(), viewer.userId)
-      : null;
+  const db = isDbConfigured() ? getDb() : null;
+  const [credits, unread] = await Promise.all([
+    db && canUseAi(role, aiAccessMode()) ? readCredits(db, viewer.userId) : null,
+    db ? unreadCount(db, viewer.userId) : 0,
+  ]);
   return (
     <>
       {credits ? (
@@ -82,6 +84,28 @@ async function HeaderAccount() {
             : `${credits.trialPrompts} free ${credits.trialPrompts === 1 ? "prompt" : "prompts"}`}
         </Link>
       ) : null}
+      <Link
+        href="/notifications"
+        className="text-muted hover:bg-panel hover:text-fg relative grid size-9 shrink-0 place-items-center rounded-full"
+        aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="size-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          aria-hidden
+        >
+          <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" strokeLinejoin="round" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" strokeLinecap="round" />
+        </svg>
+        {unread ? (
+          <span className="bg-magenta text-ink absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
+      </Link>
       <ButtonLink href="/upload" size="sm" variant="secondary" className="hidden sm:inline-flex">
         Upload
       </ButtonLink>

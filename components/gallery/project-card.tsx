@@ -74,6 +74,7 @@ export function ProjectCard({
             <span className="truncate">{card.owner.displayName}</span>
           </Link>
           <span className="text-faint flex shrink-0 items-center gap-3">
+            {card.isStaffPick ? <span className="text-magenta">Staff pick</span> : null}
             {card.isRemix ? <span className="text-cyan">Remix</span> : null}
             <span aria-label={`${card.likeCount} likes`} className="flex items-center gap-1">
               <HeartIcon /> {card.likeCount}

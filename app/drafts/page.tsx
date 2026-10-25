@@ -16,7 +16,9 @@ export default function DraftsPage() {
     <section className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="type-wide text-4xl font-black">Drafts</h1>
-        <p className="text-muted">Projects you&apos;re creating or remixing. Only you can see them.</p>
+        <p className="text-muted">
+          Projects you&apos;re creating or remixing. Only you can see them.
+        </p>
       </div>
       <Suspense
         fallback={<div className="bg-panel h-64 rounded-[var(--radius-card)]" aria-hidden />}

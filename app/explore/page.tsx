@@ -9,7 +9,12 @@ import { isLicenseId } from "@/config/licenses";
 import { isCategoryId, isStyleId, isToolId } from "@/config/taxonomy";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { RATE_LIMITS } from "@/config/limits";
-import { listPublishedProjects, type ExploreFilters } from "@/lib/projects/queries";
+import {
+  isExploreSort,
+  listPublishedProjects,
+  type ExploreFilters,
+  type ExploreSort,
+} from "@/lib/projects/queries";
 import { clientIp, rateLimit } from "@/lib/ratelimit";
 import { cachedQueryEmbedding, embedQuery, getEmbedder } from "@/lib/search/ai";
 import { refreshSearchIndex } from "@/lib/search/background";
@@ -36,7 +41,7 @@ function readFilters(sp: Search): ExploreFilters {
     tool: tool && isToolId(tool) ? tool : undefined,
     license: license && isLicenseId(license) ? license : undefined,
     style: style && isStyleId(style) ? style : undefined,
-    sort: one("sort") === "popular" ? "popular" : "new",
+    sort: isExploreSort(one("sort")) ? (one("sort") as ExploreSort) : "trending",
     page: Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1,
   };
 }
@@ -58,8 +63,53 @@ export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
 }
 
 async function Controls({ searchParams }: Pick<PageProps<"/explore">, "searchParams">) {
-  const filters = readFilters(await searchParams);
-  return <ExploreControls key={JSON.stringify(filters)} filters={filters} />;
+  const sp = await searchParams;
+  const filters = readFilters(sp);
+  return (
+    <div className="flex flex-col gap-5">
+      {filters.q ? null : <FeedTabs sp={sp} current={filters.sort ?? "trending"} />}
+      <ExploreControls key={JSON.stringify(filters)} filters={filters} />
+    </div>
+  );
+}
+
+const FEEDS: { id: ExploreSort; label: string }[] = [
+  { id: "trending", label: "Trending" },
+  { id: "new", label: "New" },
+  { id: "popular", label: "Most liked" },
+  { id: "picks", label: "Staff picks" },
+];
+
+function FeedTabs({ sp, current }: { sp: Search; current: ExploreSort }) {
+  const href = (sort: ExploreSort) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp))
+      if (typeof v === "string" && k !== "page" && k !== "sort") params.set(k, v);
+    if (sort !== "trending") params.set("sort", sort);
+    const qs = params.toString();
+    return qs ? `/explore?${qs}` : "/explore";
+  };
+  return (
+    <nav aria-label="Feeds" className="border-line flex gap-1 overflow-x-auto border-b">
+      {FEEDS.map((f) => {
+        const on = f.id === current;
+        return (
+          <Link
+            key={f.id}
+            href={href(f.id)}
+            aria-current={on ? "page" : undefined}
+            className={
+              on
+                ? "border-magenta text-fg -mb-px shrink-0 border-b-2 px-3 py-2.5 text-[15px] font-semibold"
+                : "text-muted hover:text-fg -mb-px shrink-0 border-b-2 border-transparent px-3 py-2.5 text-[15px] font-semibold"
+            }
+          >
+            {f.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
 
 async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchParams">) {
@@ -77,6 +127,15 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
     filters.q || filters.category || filters.tool || filters.license || filters.style,
   );
 
+  if (cards.length === 0 && filters.sort === "picks" && !active) {
+    return (
+      <Empty
+        title="No staff picks yet"
+        body="The REMAXX team highlights standout templates here."
+        action={{ href: "/explore", label: "See what's trending" }}
+      />
+    );
+  }
   if (cards.length === 0) {
     return active ? (
       <Empty
