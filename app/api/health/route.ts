@@ -5,6 +5,7 @@ import { getDb, isDbConfigured } from "@/lib/db/client";
 import { projects } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env";
 import { aiAccessMode, configuredProviders } from "@/lib/ai/server";
+import { getWebhookStatus } from "@/lib/admin/dashboard";
 import { stripeMode } from "@/lib/billing/stripe";
 import { embedQuery, getEmbedder } from "@/lib/search/ai";
 import { supabasePublicConfig } from "@/lib/supabase/config";
@@ -72,6 +73,7 @@ export async function GET() {
       aiAccess:
         aiAccessMode() === "admins" ? "admins only (AI_ACCESS=admins)" : "everyone signed in",
       payments: paymentsStatus(env),
+      stripeWebhook: await webhookStatus(),
     },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -96,6 +98,20 @@ function paymentsStatus(env: ReturnType<typeof serverEnv>): string {
   if (!env.STRIPE_WEBHOOK_SECRET)
     return `${mode} mode, but STRIPE_WEBHOOK_SECRET is missing: credits won't arrive after checkout`;
   return `ok: ${mode} mode`;
+}
+
+/** When Stripe last reached /api/stripe/webhook (it records every event it handles). */
+async function webhookStatus(): Promise<string> {
+  if (stripeMode() === "off" || !isDbConfigured()) return "n/a";
+  try {
+    const w = await getWebhookStatus(getDb());
+    if (!w.lastAt)
+      return "never received: in Stripe → Developers → Webhooks, check the endpoint URL is exactly <app URL>/api/stripe/webhook (no redirecting domain), the 5 events are selected, and its signing secret matches STRIPE_WEBHOOK_SECRET";
+    // Public endpoint: the time only, no event types or counts (those hint at sales).
+    return `ok: last received ${w.lastAt.toISOString()}`;
+  } catch {
+    return "unknown: couldn't read the database";
+  }
 }
 
 /** Makes one real (tiny) embedding call so problems with the key or billing show up here. */

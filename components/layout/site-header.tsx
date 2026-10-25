@@ -17,13 +17,13 @@ import { UserMenu } from "./user-menu";
 export function SiteHeader() {
   return (
     <header className="border-line/70 bg-ink/85 sticky top-0 z-40 border-b backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-3 sm:gap-6">
-          <Wordmark className="text-[22px] sm:text-2xl" />
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-6">
+          <Wordmark className="text-[19px] sm:text-2xl" />
           <nav aria-label="Main" className="flex items-center gap-1 text-[15px] font-semibold">
             <Link
               href="/explore"
-              className="text-muted hover:bg-panel hover:text-fg rounded-lg px-2.5 py-1.5"
+              className="text-muted hover:bg-panel hover:text-fg rounded-lg px-2 py-1.5 sm:px-2.5"
             >
               Explore
             </Link>
@@ -36,7 +36,7 @@ export function SiteHeader() {
             </Link>
           </nav>
         </div>
-        <nav aria-label="Account" className="flex min-h-10 items-center gap-2">
+        <nav aria-label="Account" className="flex min-h-10 shrink-0 items-center gap-1.5 sm:gap-2">
           <Suspense fallback={<div className="bg-panel size-9 rounded-full" aria-hidden />}>
             <HeaderAccount />
           </Suspense>
