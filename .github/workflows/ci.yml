@@ -50,7 +50,8 @@ jobs:
 
   e2e:
     name: Browser smoke tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 installs browser dependencies for Ubuntu 24.04, not 26.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     # A real Postgres with pgvector, like Supabase, so database code runs on the production driver.
     services:
