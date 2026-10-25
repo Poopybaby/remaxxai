@@ -16,6 +16,11 @@ const serverSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   /** Optional: an OpenAI-compatible endpoint (a proxy or gateway). Defaults to api.openai.com. */
   OPENAI_BASE_URL: z.url().optional(),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
+  DEEPSEEK_API_KEY: z.string().min(1).optional(),
+  /** Who can use AI features before credits exist (Phase 5): "admins" (default) or "signed-in". */
+  AI_ACCESS: z.enum(["admins", "signed-in"]).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -38,6 +43,10 @@ export function serverEnv(): ServerEnv {
     UPSTASH_REDIS_REST_TOKEN: emptyToUndefined(process.env.UPSTASH_REDIS_REST_TOKEN),
     OPENAI_API_KEY: emptyToUndefined(process.env.OPENAI_API_KEY),
     OPENAI_BASE_URL: emptyToUndefined(process.env.OPENAI_BASE_URL),
+    ANTHROPIC_API_KEY: emptyToUndefined(process.env.ANTHROPIC_API_KEY),
+    GOOGLE_GENERATIVE_AI_API_KEY: emptyToUndefined(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+    DEEPSEEK_API_KEY: emptyToUndefined(process.env.DEEPSEEK_API_KEY),
+    AI_ACCESS: emptyToUndefined(process.env.AI_ACCESS) as "admins" | "signed-in" | undefined,
   });
   if (!parsed.success) {
     const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");

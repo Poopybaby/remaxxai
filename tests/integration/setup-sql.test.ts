@@ -65,6 +65,7 @@ describe("first-time setup SQL", () => {
       "0001_foundation.sql",
       "0002_gallery.sql",
       "0003_vibe_search.sql",
+      "0004_editor.sql",
     ]);
 
     // Old table kept under a new name; tasks still works with its own set_updated_at.
@@ -87,7 +88,7 @@ describe("first-time setup SQL", () => {
     const db = await freshDb(STARTER_TEMPLATE);
     // Phase 2's setup: the same script, minus the newer migrations.
     const phase2 = (await buildSetupSql()).replace(
-      /-- 0003_vibe_search\.sql[\s\S]*?\$setup\$;\n/,
+      /-- 0003_vibe_search\.sql[\s\S]*?-- 0004_editor\.sql[\s\S]*?\$setup\$;\n/,
       "",
     );
     expect(phase2).not.toContain("create table project_search");

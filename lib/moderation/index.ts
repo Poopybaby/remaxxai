@@ -33,7 +33,7 @@ export async function moderate(input: {
   texts?: string[];
   imageDataUrls?: string[];
 }): Promise<ModerationVerdict> {
-  const key = serverEnv().OPENAI_API_KEY;
+  const { OPENAI_API_KEY: key, OPENAI_BASE_URL: base } = serverEnv();
   const texts = (input.texts ?? []).map((t) => t.trim()).filter(Boolean);
   const images = input.imageDataUrls ?? [];
   if (!key) return { verdict: "skipped", categories: [], source: "skipped" };
@@ -49,12 +49,15 @@ export async function moderate(input: {
   };
 
   try {
-    const res = await fetch("https://api.openai.com/v1/moderations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const res = await fetch(
+      `${(base ?? "https://api.openai.com/v1").replace(/\/$/, "")}/moderations`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      },
+    );
     if (!res.ok) {
       console.error("Moderation request failed", res.status);
       return { verdict: "skipped", categories: [], source: "skipped" };

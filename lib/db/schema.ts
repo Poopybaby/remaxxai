@@ -8,6 +8,7 @@ import {
   customType,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -325,3 +326,49 @@ export const projectSearch = pgTable("project_search", {
   embeddedTextHash: text("embedded_text_hash"),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+// ── Phase 4: remix editor ──────────────────────────────────────────────────────
+
+export const aiSessions = pgTable(
+  "ai_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.projectId, t.userId)],
+);
+
+export const aiMessages = pgTable("ai_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id"),
+  userId: uuid("user_id").notNull(),
+  projectId: uuid("project_id"),
+  kind: text("kind", { enum: ["edit", "explain"] }).notNull(),
+  role: text("role", { enum: ["user", "assistant"] }).notNull(),
+  content: text("content").notNull().default(""),
+  modelId: text("model_id"),
+  status: text("status", { enum: ["ok", "error", "blocked", "pending"] })
+    .notNull()
+    .default("ok"),
+  error: text("error"),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: numeric("cost_usd", { precision: 12, scale: 6, mode: "number" }).notNull().default(0),
+  imageCount: integer("image_count").notNull().default(0),
+  resultVersionId: uuid("result_version_id"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const explanations = pgTable(
+  "explanations",
+  {
+    versionId: uuid("version_id").notNull(),
+    modelId: text("model_id").notNull(),
+    content: text("content").notNull(),
+    createdBy: uuid("created_by"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.versionId, t.modelId] })],
+);

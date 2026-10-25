@@ -14,7 +14,32 @@ export const RATE_LIMITS = {
   dmca: { limit: 5, windowMs: HOUR },
   // Vibe searches that need a fresh embedding (cached queries and keyword searches are free).
   vibeSearch: { limit: 30, windowMs: MINUTE },
+  remix: { limit: 20, windowMs: HOUR },
+  editorSave: { limit: 120, windowMs: 10 * MINUTE },
 } as const satisfies Record<string, RateLimitRule>;
+
+/**
+ * AI editor limits. Until credits exist (Phase 5) these are what keep costs bounded.
+ * Every AI request also needs the person to pass `AI_ACCESS` (admins only by default).
+ */
+export const AI_LIMITS = {
+  perMinute: { limit: 6, windowMs: MINUTE },
+  /** Requests per person per UTC day; admins get more for testing. */
+  perDay: 40,
+  adminPerDay: 200,
+  /** Site-wide estimated spend per UTC day across all models. AI pauses for everyone past it. */
+  dailyBudgetUsd: 10,
+  /** A person waits for one AI request to finish before starting another. */
+  staleAfterMs: 3 * MINUTE,
+  maxPromptChars: 2000,
+  maxImages: 3,
+  /** Per image, after the browser shrinks it (requests must stay under Vercel's 4.5 MB). */
+  maxImageBytes: 900 * 1024,
+  edit: { maxOutputTokens: 16000, timeoutMs: 110_000 },
+  explain: { maxOutputTokens: 3000, timeoutMs: 60_000 },
+  /** Earlier prompts and replies sent back to the model for context. */
+  historyTurns: 6,
+} as const;
 
 const KB = 1024;
 const MB = 1024 * KB;

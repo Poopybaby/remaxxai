@@ -81,6 +81,31 @@ export function canFollow(viewer: Viewer, targetUserId: string): boolean {
   return viewer !== null && viewer.userId !== targetUserId;
 }
 
+// ── Remixing and the editor ──────────────────────────────────────────────────
+
+/** Anyone signed in can remix a public project; owners can also remix their own hidden ones. */
+export function canRemix(viewer: Viewer, project: ProjectAccess): boolean {
+  if (!viewer) return false;
+  if (project.status === "published") return true;
+  return isOwner(viewer, project) && project.status === "unpublished";
+}
+
+/**
+ * The editor works on drafts only, so nothing goes public without the publish step (Phase 5).
+ * Published projects are changed by remixing them into a new draft.
+ */
+export function canOpenInEditor(viewer: Viewer, project: ProjectAccess): boolean {
+  return isOwner(viewer, project) && project.status === "draft";
+}
+
+/** Where AI features are open before credits exist (Phase 5): admins only, or everyone signed in. */
+export type AiAccessMode = "admins" | "signed-in";
+
+export function canUseAi(viewer: Viewer, mode: AiAccessMode): boolean {
+  if (!viewer) return false;
+  return mode === "signed-in" || isAdmin(viewer);
+}
+
 export function assert(condition: boolean, message?: string): asserts condition {
   if (!condition) throw new PermissionError(message);
 }

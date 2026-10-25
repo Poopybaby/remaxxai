@@ -9,13 +9,17 @@ import {
   LikeSaveButtons,
   VisibilityToggle,
 } from "@/components/project/project-actions";
+import { BreakItDown } from "@/components/project/break-it-down";
 import { PreviewPanel } from "@/components/project/preview-panel";
+import { RemixButton } from "@/components/project/remix-button";
+import { ButtonLink } from "@/components/ui/button";
+import { getCachedExplanation } from "@/lib/ai/services";
 import { ReportButton } from "@/components/project/report-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { LICENSES } from "@/config/licenses";
 import { siteConfig } from "@/config/site";
 import { CATEGORIES, labelFor, STYLES, TOOLS } from "@/config/taxonomy";
-import { canViewProject } from "@/lib/auth/permissions";
+import { canRemix, canViewProject } from "@/lib/auth/permissions";
 import { getViewer } from "@/lib/auth/viewer";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import type { ProjectStatus } from "@/lib/db/schema";
@@ -76,6 +80,7 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
       : Promise.resolve(null),
     getStyleDescription(db, project.id),
   ]);
+  const cachedExplanation = versionId ? await getCachedExplanation(db, versionId) : null;
 
   const isOwner = viewer?.userId === project.owner.id;
   const published = project.status === "published";
@@ -143,13 +148,11 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
               saveCount={project.saveCount}
             />
           ) : null}
-          <span
-            className="bg-magenta/40 text-ink inline-flex h-11 cursor-not-allowed items-center rounded-[var(--radius-control)] px-5 text-[15px] font-semibold"
-            title="The remix editor is coming in the next update"
-            aria-disabled
-          >
-            Remix (soon)
-          </span>
+          {project.status === "draft" && isOwner ? (
+            <ButtonLink href={`/edit/${project.id}`}>Open in editor</ButtonLink>
+          ) : canRemix(viewer, { ownerId: project.owner.id, status: project.status }) || !viewer ? (
+            <RemixButton projectId={project.id} slug={project.slug} signedIn={Boolean(viewer)} />
+          ) : null}
         </div>
       </header>
 
@@ -180,6 +183,14 @@ async function ProjectContent({ params }: Pick<PageProps<"/p/[slug]">, "params">
             </section>
           ) : null}
           {credits.length ? <CreditChain credits={credits} /> : null}
+          {versionId && published ? (
+            <BreakItDown
+              versionId={versionId}
+              initial={cachedExplanation?.content ?? null}
+              signedIn={Boolean(viewer)}
+              slug={project.slug}
+            />
+          ) : null}
         </div>
 
         <aside className="flex flex-col gap-5 text-sm">

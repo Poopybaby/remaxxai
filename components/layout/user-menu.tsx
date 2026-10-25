@@ -78,6 +78,9 @@ export function UserMenu({
           >
             Upload
           </Link>
+          <Link role="menuitem" href="/drafts" className={item} onClick={() => setOpen(false)}>
+            Drafts
+          </Link>
           <Link role="menuitem" href="/collections" className={item} onClick={() => setOpen(false)}>
             Saved
           </Link>

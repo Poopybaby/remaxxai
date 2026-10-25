@@ -39,6 +39,10 @@ Everything is listed with instructions in [.env.example](./.env.example). Only `
 | `DATABASE_URL`                                       | Everything with data    | Supabase → Connect → connection string                                                                |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits      | Upstash console (optional until launch)                                                               |
 | `OPENAI_API_KEY`                                     | Moderation, vibe search | platform.openai.com (optional; without it uploads are marked unchecked and search matches words only) |
+| `ANTHROPIC_API_KEY`                                  | Claude in the editor    | console.anthropic.com → API Keys (optional; Claude models show "not set up" without it)               |
+| `GOOGLE_GENERATIVE_AI_API_KEY`                       | Gemini in the editor    | aistudio.google.com → Get API key (optional)                                                          |
+| `DEEPSEEK_API_KEY`                                   | DeepSeek in the editor  | platform.deepseek.com → API keys (optional)                                                           |
+| `AI_ACCESS`                                          | Who can use AI features | `admins` (default) or `signed-in`. Keep `admins` until credits exist (Phase 5)                        |
 | `VIBE_DESCRIBE_MODEL`                                | Style descriptions      | Optional; defaults to `gpt-5-mini`                                                                    |
 
 ## Supabase setup (one time)
@@ -115,6 +119,20 @@ tests/          unit/ and integration/ (PGlite)
 - Reports and DMCA notices land in `/admin` (admins only). Admins can dismiss a report, remove a project, or approve held uploads.
 - A copyright removal also hides that project's published remixes until an admin reviews them, and their credit line shows "original removed".
 
-## Coming in later phases
+## How the remix editor works
 
-How to add an AI model will be documented here with the remix editor (Phase 4).
+- **Remix** copies a published project into a private draft (`lib/projects/remix.ts`): same files (no bytes copied, blobs are shared by hash), credit to every ancestor, and the most permissive license the chain allows. Drafts only count as remixes once they're published.
+- **The editor** (`/edit/<id>`) has a chat panel (text, voice through the browser's speech recognition, reference images, model picker) and a workspace with a live preview and a CodeMirror code view.
+- **Live preview:** the project is bundled into one page in the browser (`lib/editor/bundle.ts`) and posted to a blank runner page on the preview origin (`<preview origin>/run`), which runs under the same sandbox as published previews. Unsaved edits show instantly; nothing runs on the app origin.
+- **AI edits** go through one pipeline (`lib/ai/pipeline.ts`): sign-in and `AI_ACCESS`, model set up, per-minute rate limit, per-person daily cap, site-wide daily budget, one request at a time, prompt moderation, then the model call with a timeout. Every attempt is logged in `ai_messages` with tokens and estimated cost.
+- Models answer in a small text format (`lib/ai/edit-protocol.ts`): SEARCH/REPLACE edits or whole-file writes. The answer is parsed and applied to a copy of the files, path-checked (no escaping the project, no touching images), and shown as a per-file diff. Nothing is saved until the person applies it.
+- **Versions:** every save, accepted AI change and restore is a new numbered version (`lib/projects/versions.ts`). Undo restores the previous version as a new one, so nothing is lost. Saves are rejected if the draft changed in another tab, and a draft can only reuse files from its own history.
+- **Break it down** (`/api/explain`) writes a plain-English tour of a version and caches it, so each template is explained once and then free to read for everyone.
+- Limits live in `config/limits.ts` (`AI_LIMITS`). Admins see today's AI usage and spend on `/admin`.
+
+## How to add an AI model
+
+1. Add one entry to `MODELS` in [`config/models.ts`](config/models.ts): a stable `id`, the `label` people see, the `provider`, the provider's `apiModel` name, whether it reads images (`vision`), its plan `tier`, and its price per million input/output tokens.
+2. If it's from a provider that's already supported (Anthropic, OpenAI, Google, DeepSeek), that's all: it appears in the picker once that provider's key is set.
+3. A new provider needs an adapter in [`lib/ai/providers.ts`](lib/ai/providers.ts) (request shape, response parsing, error mapping), its key in `lib/env.ts` and `lib/ai/server.ts`, an entry in `PROVIDERS` in `config/models.ts`, and a test in `tests/unit/ai-providers.test.ts`.
+4. Provider renamed a model? Update its `apiModel` and redeploy. The model's `id` stays the same, so history and usage stay linked.

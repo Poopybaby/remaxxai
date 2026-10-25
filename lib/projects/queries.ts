@@ -1,4 +1,5 @@
 /** Read queries for the gallery. Callers apply permission checks (see lib/auth/permissions). */
+import { alias } from "drizzle-orm/pg-core";
 import { and, asc, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { isLicenseId, type LicenseId } from "@/config/licenses";
 import {
@@ -365,4 +366,21 @@ export async function getImageBlob(db: Db, sha256: string): Promise<Uint8Array |
     .from(blobs)
     .where(eq(blobs.sha256, sha256));
   return row?.content ?? null;
+}
+
+/** A person's private drafts (remixes in progress), most recently edited first. */
+export async function listDrafts(
+  db: Db,
+  ownerId: string,
+): Promise<(ProjectCard & { updatedAt: Date; parentTitle: string | null })[]> {
+  const parent = alias(projects, "parent");
+  const rows = await db
+    .select({ ...cardColumns, updatedAt: projects.updatedAt, parentTitle: parent.title })
+    .from(projects)
+    .innerJoin(profiles, eq(profiles.id, projects.ownerId))
+    .leftJoin(parent, eq(parent.id, projects.parentProjectId))
+    .where(and(eq(projects.ownerId, ownerId), eq(projects.status, "draft")))
+    .orderBy(desc(projects.updatedAt))
+    .limit(100);
+  return rows.map((r) => ({ ...toCard(r), updatedAt: r.updatedAt, parentTitle: r.parentTitle }));
 }

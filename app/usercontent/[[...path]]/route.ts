@@ -27,6 +27,17 @@ export async function GET(request: Request, { params }: RouteContext<"/userconte
     });
   }
 
+  // The editor's live preview: a blank page that renders whatever the app posts to it.
+  if (path.length === 1 && path[0] === "run") {
+    return new Response(runnerHtml(new URL(siteConfig.appUrl).origin), {
+      headers: {
+        ...headers,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
+  }
+
   const [kind, versionId, ...rest] = path;
   if (kind !== "v" || !versionId || !UUID.test(versionId) || !isDbConfigured())
     return notFound(headers);
@@ -71,3 +82,23 @@ const LANDING_HTML = page(
   "This origin serves project previews in a sandbox. Open a project on REMAXX to see one here.",
 );
 const NOT_FOUND_HTML = page("This file isn't part of the project, or the project isn't public.");
+
+/**
+ * Accepts one document from the editor (only from the app's origin) and replaces itself with it.
+ * Runs under the same sandbox CSP as every other preview, so the document gets an opaque origin:
+ * no cookies, no storage, no access to the app.
+ */
+function runnerHtml(appOrigin: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Preview</title></head><body><script>
+(function(){
+  var APP = ${JSON.stringify(appOrigin)};
+  window.addEventListener("message", function (e) {
+    if (e.origin !== APP || !e.data || e.data.type !== "remaxx:render" || typeof e.data.html !== "string") return;
+    document.open();
+    document.write(e.data.html);
+    document.close();
+  });
+  parent.postMessage({ type: "remaxx:ready" }, APP);
+})();
+</script></body></html>`;
+}

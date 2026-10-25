@@ -15,6 +15,9 @@ import { getDb, isDbConfigured } from "@/lib/db/client";
 import { isOpenAiConfigured } from "@/lib/ai/openai";
 import { listOpenReports, listProjectsAwaitingReview } from "@/lib/moderation/actions";
 import { indexStatus } from "@/lib/search/indexer";
+import { usageToday } from "@/lib/ai/pipeline";
+import { AI_LIMITS } from "@/config/limits";
+import { aiAccessMode, configuredProviders } from "@/lib/ai/server";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 
@@ -55,10 +58,51 @@ async function Queues() {
     listProjectsAwaitingReview(db, viewer),
     indexStatus(db),
   ]);
+  const usage = await usageToday(db);
+  const spent = usage.reduce((sum, u) => sum + u.costUsd, 0);
   const aiOn = isOpenAiConfigured();
 
   return (
     <div className="flex flex-col gap-12">
+      <section
+        aria-labelledby="ai-heading"
+        className="border-line bg-panel flex flex-col gap-3 rounded-[var(--radius-card)] border p-5"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="ai-heading" className="text-xl font-bold">
+            AI usage today
+          </h2>
+          <p className="text-muted text-sm">
+            ${spent.toFixed(2)} of ${AI_LIMITS.dailyBudgetUsd} daily budget · access:{" "}
+            {aiAccessMode() === "admins" ? "admins only" : "everyone signed in"} · providers set up:{" "}
+            {[...configuredProviders()].join(", ") || "none"}
+          </p>
+        </div>
+        {usage.length ? (
+          <table className="text-sm">
+            <thead className="text-faint text-left">
+              <tr>
+                <th className="py-1 font-normal">Model</th>
+                <th className="py-1 text-right font-normal">Requests</th>
+                <th className="py-1 text-right font-normal">Errors</th>
+                <th className="py-1 text-right font-normal">Est. cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usage.map((u) => (
+                <tr key={u.modelId ?? "none"} className="border-line border-t">
+                  <td className="py-1.5">{u.modelId ?? "unknown"}</td>
+                  <td className="py-1.5 text-right">{u.requests}</td>
+                  <td className="py-1.5 text-right">{u.errors}</td>
+                  <td className="py-1.5 text-right">${u.costUsd.toFixed(4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-faint text-sm">No AI requests yet today.</p>
+        )}
+      </section>
       <section
         aria-labelledby="search-heading"
         className="border-line bg-panel flex flex-col gap-3 rounded-[var(--radius-card)] border p-5 sm:flex-row sm:items-center sm:justify-between"

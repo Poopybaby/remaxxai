@@ -193,14 +193,14 @@ Credits formula (all knobs in `config/plans.ts`):
 
 **Phase 4 — Remix Editor**
 
-- [ ] Remix → new draft + lineage rows + credit snapshot
-- [ ] Editor: file tree, CodeMirror, live preview, prompt panel (resizable desktop; tabbed on mobile)
-- [ ] Model registry + picker (Claude, ChatGPT, Gemini, DeepSeek); image upload disabled for models without vision
-- [ ] Voice input (Web Speech API)
-- [ ] AI edit → per-file diff review → accept / reject / undo; version history
-- [ ] "Break it down": plain-English walkthrough of stack, files, and logic
-- [ ] Rate limits, timeouts, moderation on every AI route (credits stubbed until Phase 5)
-- [ ] Tests: diff application, AI pipeline with mocked providers
+- [x] Remix → new draft + lineage rows + credit snapshot
+- [x] Editor: file tree, CodeMirror, live preview, prompt panel (side by side on desktop; tabbed on mobile)
+- [x] Model registry + picker (Claude, ChatGPT, Gemini, DeepSeek); image upload disabled for models without vision
+- [x] Voice input (Web Speech API)
+- [x] AI edit → per-file diff review → accept / reject / undo; version history
+- [x] "Break it down": plain-English walkthrough of stack, files, and logic (cached per version)
+- [x] Rate limits, timeouts, moderation on every AI route (credits stubbed until Phase 5)
+- [x] Tests: diff application, AI pipeline with mocked providers
 
 **Phase 5 — Publish & Credits**
 
@@ -231,6 +231,14 @@ Credits formula (all knobs in `config/plans.ts`):
 - Search is open to signed-out visitors (the gallery is public). It costs REMAXX a fraction of a cent per new query, is rate-limited per IP, and is never charged to user credits; credits apply to editor AI calls from Phase 4.
 - Without `OPENAI_API_KEY` everything still works with word matching; adding the key later fills in embeddings automatically.
 - `OPENAI_BASE_URL` can point the platform AI calls at an OpenAI-compatible gateway.
+
+**Phase 4 build notes:**
+
+- The editor works on private drafts only. Published projects change by remixing them, so nothing goes public without the publish step (Phase 5) and its checks.
+- Until credits exist, AI features are open to admins only (`AI_ACCESS=admins`), with a per-person daily cap and a site-wide daily budget in `config/limits.ts`. Set `AI_ACCESS=signed-in` to open it up.
+- Live preview bundles the project in the browser and renders it in a sandboxed runner on the preview origin; ES module imports between local files and multi-page navigation beyond plain links are the known limits.
+- Model IDs and prices for Google and DeepSeek come from third-party summaries (October 2026); check each provider's pricing page before Phase 5 turns costs into credits.
+- Remix counts now include published remixes only (recounted by trigger when status changes).
 
 ---
 
