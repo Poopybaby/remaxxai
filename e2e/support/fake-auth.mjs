@@ -7,6 +7,12 @@ http
   .createServer((req, res) => {
     res.setHeader("content-type", "application/json");
     if (req.url === "/health") return res.end('{"ok":true}');
+    // Which sign-in providers are "switched on" (Supabase's public settings endpoint).
+    if (req.url.startsWith("/auth/v1/settings")) {
+      return res.end(
+        JSON.stringify({ external: JSON.parse(process.env.FAKE_AUTH_EXTERNAL ?? "{}") }),
+      );
+    }
     const auth = req.headers.authorization ?? "";
     if (req.url.startsWith("/auth/v1/user") && auth.startsWith("Bearer ")) {
       const payload = JSON.parse(Buffer.from(auth.slice(7).split(".")[1], "base64url").toString());

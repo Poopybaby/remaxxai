@@ -1,6 +1,6 @@
 import { count, eq } from "drizzle-orm";
 import { connection, NextResponse } from "next/server";
-import { enabledAuthProviders } from "@/config/auth";
+import { AUTH_PROVIDERS, enabledAuthProviders } from "@/config/auth";
 import { siteConfig } from "@/config/site";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { projects } from "@/lib/db/schema";
@@ -8,6 +8,7 @@ import { serverEnv } from "@/lib/env";
 import { aiAccessMode, configuredProviders } from "@/lib/ai/server";
 import { getWebhookStatus } from "@/lib/admin/dashboard";
 import { stripeMode } from "@/lib/billing/stripe";
+import { checkSignInProviders } from "@/lib/supabase/enabled-providers";
 import { embedQuery, getEmbedder } from "@/lib/search/ai";
 import { supabasePublicConfig } from "@/lib/supabase/config";
 
@@ -73,7 +74,7 @@ export async function GET() {
       aiModels: aiModelsStatus(),
       aiAccess:
         aiAccessMode() === "admins" ? "admins only (AI_ACCESS=admins)" : "everyone signed in",
-      signInButtons: signInButtonsStatus(),
+      signInButtons: await signInButtonsStatus(),
       payments: paymentsStatus(env),
       stripeWebhook: await webhookStatus(),
     },
@@ -92,12 +93,16 @@ function aiModelsStatus(): string {
     : `ok: ${on.join(", ")}`;
 }
 
-/** Which provider buttons this build shows (NEXT_PUBLIC_* values are fixed when the site is built). */
-function signInButtonsStatus(): string {
-  const on = enabledAuthProviders();
-  return on.length
-    ? `email, ${on.join(", ")} (each must also be switched on in Supabase → Auth → Sign In / Providers)`
-    : "email only: set NEXT_PUBLIC_AUTH_PROVIDERS (e.g. google,microsoft) in Vercel, then redeploy";
+/** Which sign-in buttons show, and any listed provider Supabase hasn't switched on. */
+async function signInButtonsStatus(): Promise<string> {
+  const listed = enabledAuthProviders();
+  if (!listed.length)
+    return "email only: set NEXT_PUBLIC_AUTH_PROVIDERS (e.g. google,microsoft) in Vercel, then redeploy";
+  const check = await checkSignInProviders();
+  const off = check.notEnabled.map((p) => `${p} (Supabase: "${AUTH_PROVIDERS[p].supabase}")`);
+  return off.length
+    ? `email${check.shown.length ? `, ${check.shown.join(", ")}` : ""}; hidden because they're not switched on in Supabase → Auth → Sign In / Providers: ${off.join(", ")}`
+    : `ok: email, ${check.shown.join(", ")}${check.checked ? "" : " (couldn't confirm with Supabase)"}`;
 }
 
 function paymentsStatus(env: ReturnType<typeof serverEnv>): string {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { AUTH_PROVIDERS, enabledAuthProviders, type AuthProviderId } from "@/config/auth";
+import { AUTH_PROVIDERS, type AuthProviderId } from "@/config/auth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { safeNextPath } from "@/lib/security/hosts";
@@ -20,13 +20,20 @@ const CALLBACK_ERRORS: Record<string, string> = {
   oauth: "Sign-in with that provider was cancelled or failed. Try again.",
 };
 
-const PROVIDERS = enabledAuthProviders();
-
 /**
  * Sign in and sign up share one form: Supabase creates the account on first sign-in either way.
- * `logos` lists providers whose official logo file is in public/brand/ (checked at build time).
+ * `providers` are the ones listed in settings AND switched on in Supabase (see auth-page.tsx);
+ * `logos` lists providers whose logo file is in public/brand/ (checked at build time).
  */
-export function AuthForm({ mode, logos }: { mode: "signin" | "signup"; logos: AuthProviderId[] }) {
+export function AuthForm({
+  mode,
+  providers: PROVIDERS,
+  logos,
+}: {
+  mode: "signin" | "signup";
+  providers: AuthProviderId[];
+  logos: AuthProviderId[];
+}) {
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"), "/");
   const initialError = CALLBACK_ERRORS[params.get("error") ?? ""] ?? null;

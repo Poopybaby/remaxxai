@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DEFAULT_AVATARS } from "@/config/avatars";
-import { AUTH_PROVIDERS, enabledAuthProviders, type AuthProviderId } from "@/config/auth";
+import { AUTH_PROVIDERS, type AuthProviderId } from "@/config/auth";
 import { FREE_TRIAL_PROMPTS } from "@/config/plans";
+import { checkSignInProviders } from "@/lib/supabase/enabled-providers";
 import { AuthForm } from "./auth-form";
 
 /** Providers whose official logo has been added to public/brand/<id>.svg (checked at build). */
@@ -15,21 +16,23 @@ function availableLogos(): AuthProviderId[] {
   );
 }
 
-function verifyStep(): string {
-  const names = enabledAuthProviders().map((p) => AUTH_PROVIDERS[p].label);
+function verifyStep(providers: AuthProviderId[]): string {
+  const names = providers.map((p) => AUTH_PROVIDERS[p].label);
   if (names.length === 0) return "With a link or code we email you. No password needed.";
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : names[0];
   return `With ${list}, or a code we email you.`;
 }
 
-const STEPS = () => [
-  { title: "Verify it's you", body: verifyStep() },
+const STEPS = (providers: AuthProviderId[]) => [
+  { title: "Verify it's you", body: verifyStep(providers) },
   { title: "Set up your profile", body: "Pick a handle and one of the crew as your picture." },
   { title: "Start creating", body: "Remix a template or describe something new." },
 ];
 
-export function AuthPage({ mode }: { mode: "signin" | "signup" }) {
+export async function AuthPage({ mode }: { mode: "signin" | "signup" }) {
   const signup = mode === "signup";
+  // Only providers that Supabase will accept get a button (a half-finished setup is hidden).
+  const { shown: providers } = await checkSignInProviders();
   return (
     <section className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-16 lg:py-20">
       <div className="flex flex-col gap-7">
@@ -46,7 +49,7 @@ export function AuthPage({ mode }: { mode: "signin" | "signup" }) {
         <Suspense
           fallback={<div className="bg-panel h-56 rounded-[var(--radius-card)]" aria-hidden />}
         >
-          <AuthForm mode={mode} logos={availableLogos()} />
+          <AuthForm mode={mode} providers={providers} logos={availableLogos()} />
         </Suspense>
         <p className="text-faint text-sm">
           By continuing you agree to the{" "}
@@ -103,7 +106,7 @@ export function AuthPage({ mode }: { mode: "signin" | "signup" }) {
           </p>
         </div>
         <ol className="flex flex-col gap-4">
-          {STEPS().map((s, i) => (
+          {STEPS(providers).map((s, i) => (
             <li key={s.title} className="flex gap-3">
               <span className="bg-magenta/15 text-magenta grid size-7 shrink-0 place-items-center rounded-full text-sm font-black">
                 {i + 1}
