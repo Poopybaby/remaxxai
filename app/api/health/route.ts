@@ -1,5 +1,6 @@
 import { count, eq } from "drizzle-orm";
 import { connection, NextResponse } from "next/server";
+import { enabledAuthProviders } from "@/config/auth";
 import { siteConfig } from "@/config/site";
 import { getDb, isDbConfigured } from "@/lib/db/client";
 import { projects } from "@/lib/db/schema";
@@ -72,6 +73,7 @@ export async function GET() {
       aiModels: aiModelsStatus(),
       aiAccess:
         aiAccessMode() === "admins" ? "admins only (AI_ACCESS=admins)" : "everyone signed in",
+      signInButtons: signInButtonsStatus(),
       payments: paymentsStatus(env),
       stripeWebhook: await webhookStatus(),
     },
@@ -88,6 +90,14 @@ function aiModelsStatus(): string {
   return missing.length
     ? `ok: ${on.join(", ")} (not set up yet: ${missing.join(", ")})`
     : `ok: ${on.join(", ")}`;
+}
+
+/** Which provider buttons this build shows (NEXT_PUBLIC_* values are fixed when the site is built). */
+function signInButtonsStatus(): string {
+  const on = enabledAuthProviders();
+  return on.length
+    ? `email, ${on.join(", ")} (each must also be switched on in Supabase → Auth → Sign In / Providers)`
+    : "email only: set NEXT_PUBLIC_AUTH_PROVIDERS (e.g. google,microsoft) in Vercel, then redeploy";
 }
 
 function paymentsStatus(env: ReturnType<typeof serverEnv>): string {
