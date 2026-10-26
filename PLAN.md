@@ -222,6 +222,14 @@ Credits formula (all knobs in `config/plans.ts`):
 - [x] Legal pages updated for billing and Create (still DRAFT), [deployment guide](docs/DEPLOYMENT.md), Playwright smoke suite in CI on real Postgres
 - [ ] **Launch checklist (D'vaunte):** see section 6 of [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): lawyer review of the legal pages, DMCA agent registration, real email sender, Upstash, Stripe live mode, then `AI_ACCESS=signed-in`
 
+**After Phase 6: tying it together (Oct 25, 2026)**
+
+- [x] Landing page: what REMAXX is, our goal, how it works, why REMAXX, who it's for; hover animation on the Moonbrew cards; Sign up / Sign in replace the waitlist (signed-in visitors get Start creating)
+- [x] Sign in and sign up: `/signup` and `/login`; Google, Microsoft and Apple buttons (plus GitHub) once each is set up in Supabase and listed in `NEXT_PUBLIC_AUTH_PROVIDERS`; email link + code stays as the alternative; guided steps (verify → profile → create)
+- [x] Create in the editor's layout: prompt panel, live preview, Inspiration panel (blank canvas + starters). Sending creates the draft and the editor sends the prompt on arrival
+- [x] Profile pictures: the REMAXX crew (Sprinkles, Patch, Plume, Snooze) as random defaults, chosen in onboarding or Settings, or upload your own (migration 0007)
+- [ ] **D'vaunte:** set up Google and Microsoft sign-in (and Apple if wanted) per docs/DEPLOYMENT.md §2a, add `NEXT_PUBLIC_AUTH_PROVIDERS`, and drop the official logo files into `public/brand/`
+
 **Phase 2 build notes (decided while building, cheap to change later):**
 
 - Uploads are static sites only (HTML/CSS/JS/images/fonts/media). React/Vue/TS source is asked for its build output; Sandpack-powered React projects arrive with the editor in Phase 4.

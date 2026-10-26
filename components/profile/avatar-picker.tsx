@@ -22,8 +22,9 @@ export function AvatarPicker({ current }: { current: string | null }) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // The newest change wins: an upload after a pick, or a pick after an upload.
-  const shown = (uploading ? null : uploaded) ?? state.url ?? current;
+  // The newest change wins: a pick clears the uploaded picture (see the form's onSubmit), and a
+  // later upload sets it again.
+  const shown = uploaded ?? state.url ?? current;
   const crew = DEFAULT_AVATARS.find((a) => a.url === shown);
 
   async function onFile(list: FileList | null) {
@@ -71,7 +72,7 @@ export function AvatarPicker({ current }: { current: string | null }) {
         </div>
       </div>
 
-      <form action={choose} className="flex flex-col gap-2">
+      <form action={choose} onSubmit={() => setUploaded(null)} className="flex flex-col gap-2">
         <p id="crew-label" className="text-fg text-sm font-semibold">
           Pick one of the REMAXX crew
         </p>

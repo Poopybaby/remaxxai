@@ -143,6 +143,47 @@
   animation-delay: var(--delay, 0ms);
 }
 
+/* Hovering a hero card: it lifts out of the fan, straightens a little and glows, its prompt
+   pops, and the little site inside comes alive. Pointer devices only; no motion if reduced. */
+.card-lift,
+.card-frame,
+.card-prompt,
+.card-moon,
+.card-blob,
+.card-band {
+  transition:
+    transform 450ms var(--ease-out-quint),
+    box-shadow 450ms var(--ease-out-quint),
+    border-color 450ms var(--ease-out-quint);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .fan-card:hover .card-lift {
+    transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) * -0.6)) scale(1.04);
+  }
+  .fan-card:hover .card-frame {
+    border-color: color-mix(in oklab, var(--color-magenta) 60%, transparent);
+    box-shadow:
+      0 30px 60px -12px rgb(0 0 0 / 0.7),
+      0 0 0 1px color-mix(in oklab, var(--color-magenta) 35%, transparent),
+      0 0 48px -8px color-mix(in oklab, var(--color-magenta) 55%, transparent);
+  }
+  .fan-card:hover .card-prompt {
+    transform: translateY(-6px) scale(1.05);
+  }
+  .fan-card:hover .card-moon {
+    transform: rotate(-40deg) scale(1.08);
+  }
+  .fan-card:hover .card-blob {
+    transform: translate(-18px, 14px) scale(1.15);
+  }
+  .fan-card:hover .card-blob-2 {
+    transform: translate(22px, -12px) scale(1.1);
+  }
+  .fan-card:hover .card-band {
+    transform: rotate(-4deg) scaleX(1.12);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fan-card {
     animation: none;

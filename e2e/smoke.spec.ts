@@ -54,6 +54,7 @@ for (const path of [
   "/u/remaxx_studio",
   "/pricing",
   "/login",
+  "/signup",
   "/legal/terms",
 ]) {
   test(`public page ${path} loads cleanly and is accessible`, async ({ page }) => {
@@ -75,16 +76,16 @@ test("an admin can create, edit with AI and publish a project", async ({ browser
   const page = await signedIn(browser, "admin");
   const errors = watchErrors(page);
 
-  // Create from the blank starter.
+  // Describe a project on Create (blank canvas). Sending makes the draft and opens the editor,
+  // which sends the prompt by itself; the local stand-in answers it.
   await page.goto("/create", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Start creating" }).click();
-  await page.waitForURL(/\/edit\/[0-9a-f-]{36}$/, { timeout: 30_000 });
   await expectAccessible(page);
-
-  // One AI edit (answered by the local stand-in), reviewed and applied.
+  await page.getByRole("radio", { name: /Blank canvas/ }).click();
   await page.locator("#prompt").fill("Add a small glowing badge that says Remixed with REMAXX");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.waitForURL(/\/edit\/[0-9a-f-]{36}$/, { timeout: 30_000 });
   await expect(page.getByText("Review the changes")).toBeVisible({ timeout: 30_000 });
+  await expectAccessible(page);
   await page.getByRole("button", { name: /^Apply/ }).click();
   await expect(page.getByText(/Applied to 1 file/)).toBeVisible({ timeout: 15_000 });
 
@@ -150,4 +151,26 @@ test("members can't buy plans while AI is admins-only, or open admin pages", asy
       expect(html, `${path} leaks "${secret}"`).not.toContain(secret);
     }
   }
+});
+
+test("anyone can upload a profile picture and switch back to one of the crew", async ({
+  browser,
+}) => {
+  const page = await signedIn(browser, "member");
+  const errors = watchErrors(page);
+  await page.goto("/settings", { waitUntil: "networkidle" });
+  const upload = page.waitForResponse((r) => r.url().includes("/api/profile/avatar"));
+  await page.locator('label:has-text("Upload your own") input[type="file"]').setInputFiles({
+    name: "me.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  expect((await upload).status()).toBe(200);
+  await expect(page.getByText("Your own picture")).toBeVisible();
+  await page.getByRole("button", { name: "Plume" }).click();
+  await expect(page.getByText(/An owl with an eye for detail/)).toBeVisible();
+  // The public profile shows the new picture straight away.
+  await page.goto("/u/e2e_member", { waitUntil: "networkidle" });
+  await expect(page.locator('img[src*="plume"]').first()).toBeVisible();
+  expect(errors).toEqual([]);
 });

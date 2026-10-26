@@ -77,6 +77,24 @@ describe("default avatars", () => {
     expect(CREW).toContain(await avatarOf(id));
   });
 
+  it("still lets people sign up if the database hasn't been updated for avatars yet", async () => {
+    await t.pg.exec(`
+      alter table profiles drop constraint profiles_avatar_url_check;
+      alter table profiles add constraint profiles_avatar_url_check
+        check (avatar_url is null or avatar_url ~ '^https://') not valid;`);
+    try {
+      const p = await newProfile("early_bird");
+      expect(p.avatarUrl).toBeNull();
+    } finally {
+      await t.pg.exec(`
+        alter table profiles drop constraint profiles_avatar_url_check;
+        update profiles set avatar_url = '/avatars/patch.webp' where avatar_url is null;
+        alter table profiles add constraint profiles_avatar_url_check check (
+          avatar_url is null or avatar_url ~ '^https://' or avatar_url ~ '^/avatars/[a-z]+\\.webp$'
+          or avatar_url ~ '^/media/[a-f0-9]{64}\\.(png|jpg|webp|gif)$');`);
+    }
+  });
+
   it("only stores picture URLs it knows how to serve safely", async () => {
     for (const bad of [
       "javascript:alert(1)",

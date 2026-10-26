@@ -64,37 +64,46 @@ export async function createProfile(
   }
 
   const now = new Date();
-  try {
-    const profile = await db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(profiles)
-        .values({
-          id: userId,
-          handle: handle.handle,
-          displayName: parsed.data.displayName,
-          avatarUrl: parsed.data.avatarUrl ?? randomDefaultAvatarUrl(),
-          ageConfirmedAt: now,
-        })
-        .returning();
-      await tx.insert(legalAcceptances).values([
-        { userId, document: "terms", version: LEGAL_VERSIONS.terms, acceptedAt: now },
-        {
-          userId,
-          document: "acceptable_use",
-          version: LEGAL_VERSIONS.acceptableUse,
-          acceptedAt: now,
-        },
-      ]);
-      if (!row) throw new Error("Profile insert returned no row");
-      return row;
-    });
-    return { ok: true, value: profile };
-  } catch (err) {
-    // Two people racing for the same handle: the unique constraint decides.
-    if (isUniqueViolation(err)) {
-      return { ok: false, errors: { handle: "That handle is taken. Try another one." } };
+  let avatarUrl: string | null = parsed.data.avatarUrl ?? randomDefaultAvatarUrl();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const profile = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(profiles)
+          .values({
+            id: userId,
+            handle: handle.handle,
+            displayName: parsed.data.displayName,
+            avatarUrl,
+            ageConfirmedAt: now,
+          })
+          .returning();
+        await tx.insert(legalAcceptances).values([
+          { userId, document: "terms", version: LEGAL_VERSIONS.terms, acceptedAt: now },
+          {
+            userId,
+            document: "acceptable_use",
+            version: LEGAL_VERSIONS.acceptableUse,
+            acceptedAt: now,
+          },
+        ]);
+        if (!row) throw new Error("Profile insert returned no row");
+        return row;
+      });
+      return { ok: true, value: profile };
+    } catch (err) {
+      // Two people racing for the same handle: the unique constraint decides.
+      if (isUniqueViolation(err)) {
+        return { ok: false, errors: { handle: "That handle is taken. Try another one." } };
+      }
+      // The database doesn't accept this kind of picture yet (migration 0007 not run): sign-up
+      // still works, just without a picture. The migration gives everyone without one a default.
+      if (avatarUrl && attempt === 0 && isAvatarCheckViolation(err)) {
+        avatarUrl = null;
+        continue;
+      }
+      throw err;
     }
-    throw err;
   }
 }
 
@@ -160,6 +169,29 @@ function flattenErrors(error: z.ZodError): FieldErrors {
     out[key] ??= issue.message;
   }
   return out;
+}
+
+/** Postgres check-constraint failure (23514) on the profile picture column. */
+function isAvatarCheckViolation(err: unknown): boolean {
+  let current: unknown = err;
+  for (let depth = 0; current && depth < 5; depth++) {
+    if (
+      typeof current === "object" &&
+      "code" in current &&
+      current.code === "23514" &&
+      /avatar_url/.test(
+        String(
+          (current as { constraint_name?: unknown; constraint?: unknown }).constraint_name ??
+            (current as { constraint?: unknown }).constraint ??
+            (current as { message?: unknown }).message ??
+            "",
+        ),
+      )
+    )
+      return true;
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
 }
 
 export function isUniqueViolation(err: unknown): boolean {

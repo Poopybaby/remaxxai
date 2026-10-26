@@ -15,7 +15,7 @@ import { AI_LIMITS } from "@/config/limits";
 import { modelAllowed } from "@/config/plans";
 import { estimateCredits } from "@/lib/billing/estimate";
 import type { FileChange } from "@/lib/ai/edit-protocol";
-import { firstPromptKey } from "@/lib/editor/first-prompt";
+import { firstPromptKey, parseHandoff, type Handoff } from "@/lib/editor/first-prompt";
 import { cn } from "@/lib/utils/cn";
 
 export type ChatItem = {
@@ -54,13 +54,17 @@ export type Credits = {
   modelTier: "starter" | "pro";
 };
 
-const SUGGESTIONS = [
-  "Make it dark mode with glowing accents",
-  "Change the colors to a sunset palette",
-  "Add a contact section at the bottom",
-  "Make the headline bigger and bolder",
-  "Translate all the text to Spanish",
-];
+const DEFAULT_INTRO = {
+  title: "What do you want to change?",
+  body: "Describe it in plain words. You'll see exactly what the AI changes before anything is saved, and you can undo any step.",
+  suggestions: [
+    "Make it dark mode with glowing accents",
+    "Change the colors to a sunset palette",
+    "Add a contact section at the bottom",
+    "Make the headline bigger and bolder",
+    "Translate all the text to Spanish",
+  ],
+};
 
 const MODEL_KEY = "remaxx:model";
 const MAX_IMAGES = 3;
@@ -140,6 +144,9 @@ export function ChatPanel({
   onUndo,
   currentVersionId,
   projectId,
+  intro = DEFAULT_INTRO,
+  placeholder = "Describe a change, e.g. “make the buttons rounder and pink”",
+  sendLabel = "Send",
 }: {
   items: ChatItem[];
   proposal: Proposal | null;
@@ -155,22 +162,12 @@ export function ChatPanel({
   onUndo: (versionId: string) => void;
   currentVersionId: string;
   projectId: string;
+  /** The empty state: heading, explanation and clickable suggestions. */
+  intro?: { title: string; body: string; suggestions: readonly string[] };
+  placeholder?: string;
+  sendLabel?: string;
 }) {
   const [prompt, setPrompt] = useState("");
-  // A description typed on the Create page waits here; it's only sent when the person clicks Send.
-  useEffect(() => {
-    try {
-      const key = firstPromptKey(projectId);
-      const waiting = sessionStorage.getItem(key);
-      if (!waiting) return;
-      sessionStorage.removeItem(key);
-      // Reading browser storage has to happen after hydration.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPrompt(waiting);
-    } catch {
-      // Storage blocked: start empty.
-    }
-  }, [projectId]);
   const [images, setImages] = useState<Attached[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const usable = (m: ModelOption) => m.available && modelAllowed(m.tier, credits.modelTier);
@@ -188,6 +185,31 @@ export function ChatPanel({
     (remembered && models.some((m) => m.id === remembered && usable(m))
       ? remembered
       : firstAvailable);
+  // What Create handed over: a prompt to send right away, or a description to fill in.
+  const handled = useRef(false);
+  useEffect(() => {
+    if (handled.current) return;
+    handled.current = true;
+    let handoff: Handoff | null = null;
+    try {
+      const key = firstPromptKey(projectId);
+      handoff = parseHandoff(sessionStorage.getItem(key) ?? "");
+      sessionStorage.removeItem(key);
+    } catch {
+      // Storage blocked: start empty.
+    }
+    if (!handoff) return;
+    const chosen = handoff.modelId ? models.find((m) => m.id === handoff.modelId) : undefined;
+    if (handoff.send && ai.allowed && chosen && usable(chosen)) {
+      onAsk(handoff.prompt, chosen.id, handoff.images ?? []);
+      return;
+    }
+    // Couldn't send it (model no longer available, etc.): leave it in the box to review.
+    // Reading browser storage has to happen after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrompt(handoff.prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, on arrival
+  }, []);
   const [listening, setListening] = useState(false);
   const recognition = useRef<Recognition | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -293,13 +315,10 @@ export function ChatPanel({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
         {items.length === 0 && !proposal ? (
           <div className="flex flex-col gap-3 pt-2">
-            <p className="text-fg font-semibold">What do you want to change?</p>
-            <p className="text-muted text-sm">
-              Describe it in plain words. You&apos;ll see exactly what the AI changes before
-              anything is saved, and you can undo any step.
-            </p>
+            <p className="text-fg font-semibold">{intro.title}</p>
+            <p className="text-muted text-sm">{intro.body}</p>
             <div className="flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s) => (
+              {intro.suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -379,11 +398,7 @@ export function ChatPanel({
           onKeyDown={onKey}
           rows={3}
           disabled={!ai.allowed}
-          placeholder={
-            listening
-              ? "Listening… speak your change"
-              : "Describe a change, e.g. “make the buttons rounder and pink”"
-          }
+          placeholder={listening ? "Listening… speak your change" : placeholder}
           className="bg-panel border-line focus:border-cyan/60 placeholder:text-faint min-h-20 w-full resize-none rounded-[var(--radius-control)] border px-3 py-2.5 text-[15px] outline-none disabled:opacity-60"
         />
         <div className="flex items-center gap-1.5">
@@ -447,7 +462,7 @@ export function ChatPanel({
             </button>
           ) : null}
           <Button type="submit" size="sm" disabled={disabled || !prompt.trim()}>
-            {busy === "ai" ? "Working…" : "Send"}
+            {busy === "ai" ? "Working…" : sendLabel}
           </Button>
         </div>
         <p className="text-faint flex flex-wrap items-center justify-between gap-x-3 text-xs">

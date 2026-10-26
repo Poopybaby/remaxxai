@@ -25,7 +25,31 @@ After any change to settings, redeploy on Vercel and open **`/api/health`**. It 
 3. **Auth → URL Configuration:** Site URL = your app URL; add `https://<app domain>/auth/callback` to Redirect URLs.
 4. **Auth → Emails → Templates:** paste the templates from [email-templates.md](email-templates.md).
 5. **Auth → SMTP:** connect Resend (or another sender) before launch.
-6. Google/GitHub sign-in (optional): turn the provider on in **Auth → Sign In / Providers**, then set `NEXT_PUBLIC_AUTH_PROVIDERS=google,github`.
+6. Google, Microsoft and Apple sign-in: see section 2a.
+
+## 2a. Sign-in providers (Google, Microsoft, Apple)
+
+Each provider needs an app on that company's developer site. All of them use the same **callback URL**, which Supabase shows at the top of each provider's settings (**Auth → Sign In / Providers**). It looks like `https://<project>.supabase.co/auth/v1/callback`. After switching a provider on in Supabase, add it to `NEXT_PUBLIC_AUTH_PROVIDERS` in Vercel (e.g. `google,microsoft,apple`) and redeploy; its button then appears on `/login` and `/signup`. People who sign in with a provider skip the email step, since the provider already verified their address.
+
+**Google** (most people have one)
+
+1. [Google Cloud Console](https://console.cloud.google.com) → create a project → **APIs & Services → OAuth consent screen**: External, app name REMAXX, your support email, and your domain under authorized domains. Publish it when you're ready for everyone (in testing it only works for test users you list).
+2. **Credentials → Create credentials → OAuth client ID** → Web application. Authorized redirect URI: the Supabase callback URL.
+3. Copy the client ID and client secret into Supabase → Providers → **Google**, and switch it on.
+
+**Microsoft** (Outlook, Hotmail, Xbox and work/school accounts)
+
+1. [Azure portal](https://portal.azure.com) → **Microsoft Entra ID → App registrations → New registration**. Name REMAXX. Supported account types: _Accounts in any organizational directory and personal Microsoft accounts_. Redirect URI: Web, the Supabase callback URL.
+2. **Certificates & secrets → New client secret**. Copy its **Value** right away (it's shown once). Note when it expires and set a reminder to renew it.
+3. Supabase → Providers → **Azure** (Supabase's name for Microsoft): paste the Application (client) ID and the secret value, leave the tenant URL empty, and switch it on.
+
+**Apple** (popular with iPhone users; optional)
+
+1. Needs a paid [Apple Developer Program](https://developer.apple.com/programs/) membership.
+2. In **Certificates, Identifiers & Profiles**: an App ID with _Sign in with Apple_, a **Services ID** (this is the client ID) configured with your domain and the Supabase callback URL as the return URL, and a **Key** with _Sign in with Apple_ (download the `.p8` file once).
+3. Supabase → Providers → **Apple**: follow Supabase's Apple guide to turn the key into the client secret. That secret expires every six months, so set a reminder to regenerate it.
+
+**Button logos.** Google, Microsoft and Apple each publish official sign-in button artwork and ask that it's used as provided. Download it from their branding pages and save it as `public/brand/google.svg`, `public/brand/microsoft.svg` and `public/brand/apple.svg`; the buttons pick the files up automatically on the next deploy. Without them the buttons show the provider's name only.
 
 ## 3. Hosting (Vercel)
 

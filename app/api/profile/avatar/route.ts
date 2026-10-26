@@ -1,4 +1,4 @@
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { RATE_LIMITS } from "@/config/limits";
 import { AVATAR_MAX_BYTES, AvatarError, uploadAvatar } from "@/lib/avatars";
@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     const res = await uploadAvatar(getDb(), viewer, new Uint8Array(await file.arrayBuffer()), {
       moderate,
     });
-    updateTag(`profile:${res.handle}`);
+    // Route handlers can't use updateTag (Server Actions only). expire: 0 so the profile page
+    // shows the new picture on the very next request.
+    revalidateTag(`profile:${res.handle}`, { expire: 0 });
     return jsonOk({ url: res.url });
   } catch (err) {
     if (err instanceof AvatarError) return jsonError(400, err.message);

@@ -1,40 +1,54 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { aiAccessMode } from "@/lib/ai/server";
+import { siteConfig } from "@/config/site";
+import { aiAccessMode, modelOptions } from "@/lib/ai/server";
 import { canUseAi } from "@/lib/auth/permissions";
 import { getViewerContext } from "@/lib/auth/viewer";
-import { CreateForm } from "./create-form";
+import { getEntitlement } from "@/lib/billing/credits";
+import { getDb, isDbConfigured } from "@/lib/db/client";
+import { CreateStudio } from "./create-studio";
 
 export const metadata: Metadata = {
   title: "Create",
-  description: "Start a new project on REMAXX: describe it to AI or build from a starter.",
+  description: "Start a new project on REMAXX: describe it to AI, or start from a blank canvas.",
   robots: { index: false },
 };
 
 export default function CreatePage() {
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-12 sm:px-6">
-      <div className="flex flex-col gap-3">
-        <h1 className="type-wide text-4xl font-black sm:text-5xl">Create</h1>
-        <p className="text-muted max-w-[60ch]">
-          Start something new. Describe what you want and let AI build it, or pick a starter and
-          make it yours. You can publish it to the gallery when it&apos;s ready.
-        </p>
-      </div>
-      <Suspense
-        fallback={<div className="bg-panel h-[28rem] rounded-[var(--radius-card)]" aria-hidden />}
-      >
-        <CreateGate />
-      </Suspense>
-    </section>
+    <Suspense fallback={<div className="bg-ink h-[calc(100dvh-4rem)]" aria-busy />}>
+      <CreateLoader />
+    </Suspense>
   );
 }
 
-async function CreateGate() {
+async function CreateLoader() {
   const ctx = await getViewerContext();
   if (ctx.status === "anonymous") redirect("/login?next=/create");
   if (ctx.status === "needs_onboarding") redirect("/onboarding?next=/create");
-  const aiAllowed = canUseAi({ userId: ctx.userId, role: ctx.profile.role }, aiAccessMode());
-  return <CreateForm aiAllowed={aiAllowed} />;
+  if (!isDbConfigured()) redirect("/");
+  const viewer = { userId: ctx.userId, role: ctx.profile.role };
+  const ent = await getEntitlement(getDb(), ctx.userId);
+  return (
+    <CreateStudio
+      data={{
+        models: modelOptions(),
+        credits: {
+          balance: ent.balance,
+          trialPrompts: ent.trialPrompts,
+          planName: ent.plan?.name ?? null,
+          modelTier: ent.modelTier,
+        },
+        ai: canUseAi(viewer, aiAccessMode())
+          ? { allowed: true }
+          : {
+              allowed: false,
+              reason:
+                "AI editing is in early access for now. Pick a starting point and use “Edit by hand”.",
+            },
+        previewOrigin: new URL(siteConfig.previewOrigin).origin,
+      }}
+    />
+  );
 }

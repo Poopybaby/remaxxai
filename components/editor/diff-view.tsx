@@ -46,7 +46,7 @@ export function DiffView({ before, after }: { before: string; after: string }) {
                       kind === " " && "text-faint",
                     )}
                   >
-                    <span className="w-8 shrink-0 text-right opacity-50 select-none">{num}</span>
+                    <span className="text-faint w-8 shrink-0 text-right select-none">{num}</span>
                     <span className="w-3 shrink-0 select-none">{kind === " " ? "" : kind}</span>
                     <span className="min-w-0 break-all">{l.slice(1)}</span>
                   </div>
